@@ -30,7 +30,7 @@ c:\FlashFacts\
 │       ├── types/                    # TypeScript data models matching FastAPI Pydantic schemas
 │       └── .env.local                # Frontend API environment variables
 ├── docs/                             # Architecture & Requirements Documentation
-├── tests/                            # Pytest backend test suite (12 passed)
+├── tests/                            # Pytest backend test suite (23 passed)
 ├── docker-compose.yml                # Docker compose (PostgreSQL, Redis, API)
 ├── Dockerfile                        # API Docker container setup
 └── README.md                         # Project documentation
@@ -94,6 +94,35 @@ pytest -v
 cd apps/web
 npm run build
 ```
+
+## Reliable Ingestion
+
+Ingestion follows this flow:
+
+`Source -> Fetch -> Retry -> Parse -> Normalize -> Document deduplication -> Event extraction -> Event deduplication -> Provenance -> Database`
+
+The manual trigger is `POST /api/v1/sources/ingest`, or the developer report command:
+
+```bash
+python tools/run_ingestion_test.py
+```
+
+The scheduler is disabled by default. Configure it in `.env`:
+
+```env
+INGESTION_ENABLED=false
+INGESTION_INTERVAL_MINUTES=30
+INGESTION_REQUEST_TIMEOUT=15
+INGESTION_MAX_RETRIES=3
+INGESTION_RETRY_BACKOFF=1
+INGESTION_USER_AGENT=FlashFacts/0.1 (+https://example.com)
+```
+
+Retries apply to timeouts, connection failures, HTTP 429, and HTTP 5xx responses. Each source records its last attempt and error, and a failed source does not stop other enabled sources. Feed GUIDs and normalized content hashes keep repeated runs idempotent while event-source links preserve provenance.
+
+Apply database migrations with `alembic upgrade head` before using an existing database. Automated tests use mocked feeds and do not depend on live websites.
+
+The Day 1 live validation used the three development sources seeded by `tools/init_db.py` on 2026-09-04. The first run attempted 3 sources, succeeded for 3, discovered and inserted 57 documents, created 57 events, and completed in 7.87 seconds. The repeat run attempted 3 sources, succeeded for 3, skipped 57 duplicate documents, created 0 events, and completed in 2.39 seconds.
 
 ---
 

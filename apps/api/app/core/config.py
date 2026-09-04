@@ -8,13 +8,13 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
     APP_ENV: str = "development"
-    
+
     # Database
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/flashfacts"
-    
+
     # Cache / Message Queue
     REDIS_URL: str = "redis://localhost:6379/0"
-    
+
     # LLM (Phase 2)
     # Backwards-compatible key from Phase 2
     LLM_API_KEY: str = ""
@@ -23,7 +23,15 @@ class Settings(BaseSettings):
     AI_PROVIDER: str = "fallback"
     AI_API_KEY: str = ""
     AI_MODEL: str = "gpt-4o-mini"
-    
+
+    # Ingestion
+    INGESTION_ENABLED: bool = False
+    INGESTION_INTERVAL_MINUTES: int = 30
+    INGESTION_REQUEST_TIMEOUT: float = 15.0
+    INGESTION_MAX_RETRIES: int = 3
+    INGESTION_RETRY_BACKOFF: float = 1.0
+    INGESTION_USER_AGENT: str = "FlashFacts/0.1 (+https://example.com)"
+
     # CORS
     CORS_ORIGINS: Union[str, List[str]] = ["*"]
 

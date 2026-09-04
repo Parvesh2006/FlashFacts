@@ -1,5 +1,7 @@
 from unittest.mock import patch, MagicMock
+from datetime import datetime, timezone
 from app.models.source import Source
+from app.models.ingestion_run import IngestionRun
 from app.services.ingestion import IngestionService
 from app.services.ai_provider import FallbackAIProvider
 from app.repositories.event_repository import EventRepository
@@ -18,6 +20,12 @@ def test_identical_document_ingestion_twice(db_session):
     db_session.add(source)
     db_session.commit()
 
+    # Create ingestion runs
+    ingestion_run1 = IngestionRun(started_at=datetime.now(timezone.utc), status="running")
+    ingestion_run2 = IngestionRun(started_at=datetime.now(timezone.utc), status="running")
+    db_session.add_all([ingestion_run1, ingestion_run2])
+    db_session.commit()
+
     mock_entries = [
         {
             "title": "Breakthrough in LLM Reasoning Models",
@@ -30,19 +38,23 @@ def test_identical_document_ingestion_twice(db_session):
     mock_feed.entries = mock_entries
 
     service = IngestionService(db_session)
-    with patch.object(service, "fetch_feed", return_value=mock_feed):
-        stats = service.ingest_source(source)
 
-        assert stats["discovered"] == 1
-        assert stats["documents_stored"] == 1
-        assert stats["events_created"] == 1
+    def mock_fetch(url):
+        return mock_feed, 200, None
+
+    with patch.object(service, "fetch_feed", side_effect=mock_fetch):
+        metric1 = service.ingest_source(source, ingestion_run1)
+
+        assert metric1.documents_discovered == 1
+        assert metric1.documents_accepted == 1
+        assert metric1.events_created == 1
 
         # Run ingestion a SECOND time with identical data -> document duplicate skipped
-        stats_repeat = service.ingest_source(source)
-        assert stats_repeat["discovered"] == 1
-        assert stats_repeat["documents_stored"] == 0
-        assert stats_repeat["skipped"] == 1
-        assert stats_repeat["events_created"] == 0
+        metric2 = service.ingest_source(source, ingestion_run2)
+        assert metric2.documents_discovered == 1
+        assert metric2.documents_accepted == 0
+        assert metric2.documents_duplicate == 1
+        assert metric2.events_created == 0
 
 
 def test_same_event_from_multiple_sources_merges_and_preserves_attribution(db_session):
@@ -68,6 +80,12 @@ def test_same_event_from_multiple_sources_merges_and_preserves_attribution(db_se
     db_session.add_all([s1, s2])
     db_session.commit()
 
+    # Create ingestion runs
+    ingestion_run1 = IngestionRun(started_at=datetime.now(timezone.utc), status="running")
+    ingestion_run2 = IngestionRun(started_at=datetime.now(timezone.utc), status="running")
+    db_session.add_all([ingestion_run1, ingestion_run2])
+    db_session.commit()
+
     mock_entries = [
         {
             "title": "Parliament Passes New Infrastructure Bill",
@@ -81,9 +99,13 @@ def test_same_event_from_multiple_sources_merges_and_preserves_attribution(db_se
 
     # Ingest with Source One
     service1 = IngestionService(db_session)
-    with patch.object(service1, "fetch_feed", return_value=mock_feed):
-        res1 = service1.ingest_source(s1)
-        assert res1["events_created"] == 1
+
+    def mock_fetch1(url):
+        return mock_feed, 200, None
+
+    with patch.object(service1, "fetch_feed", side_effect=mock_fetch1):
+        res1 = service1.ingest_source(s1, ingestion_run1)
+        assert res1.events_created == 1
 
     # Now simulate the same article appearing on Source Two (same title/content but different URL)
     mock_entries_2 = [
@@ -98,10 +120,14 @@ def test_same_event_from_multiple_sources_merges_and_preserves_attribution(db_se
     mock_feed_2.entries = mock_entries_2
 
     service2 = IngestionService(db_session)
-    with patch.object(service2, "fetch_feed", return_value=mock_feed_2):
-        res2 = service2.ingest_source(s2)
+
+    def mock_fetch2(url):
+        return mock_feed_2, 200, None
+
+    with patch.object(service2, "fetch_feed", side_effect=mock_fetch2):
+        res2 = service2.ingest_source(s2, ingestion_run2)
         # Should detect same event and link document to existing event
-        assert res2["events_deduplicated"] == 1
+        assert res2.events_deduplicated == 1
 
     # Verify event has two event_sources linked
     repo = EventRepository(db_session)
@@ -124,6 +150,11 @@ def test_entity_persistence_and_attachment(db_session):
         enabled=True
     )
     db_session.add(s)
+    db_session.commit()
+
+    # Create ingestion run
+    ingestion_run = IngestionRun(started_at=datetime.now(timezone.utc), status="running")
+    db_session.add(ingestion_run)
     db_session.commit()
 
     mock_entries = [
@@ -150,14 +181,17 @@ def test_entity_persistence_and_attachment(db_session):
             }
 
     service = IngestionService(db_session)
-    with patch.object(service, "fetch_feed", return_value=mock_feed):
+
+    def mock_fetch(url):
+        return mock_feed, 200, None
+
+    with patch.object(service, "fetch_feed", side_effect=mock_fetch):
         # inject mock AI provider
         service.ai_provider = MockAI()
-        res = service.ingest_source(s)
-        assert res["events_created"] == 1
+        res = service.ingest_source(s, ingestion_run)
+        assert res.events_created == 1
 
     # Verify entity exists in DB
-    from app.repositories.event_repository import EventRepository
     repo = EventRepository(db_session)
     events, total = repo.list_events()
     assert total == 1
@@ -181,8 +215,18 @@ def test_feed_failure_is_handled_and_reported(db_session):
     db_session.add(s)
     db_session.commit()
 
+    # Create ingestion run
+    ingestion_run = IngestionRun(started_at=datetime.now(timezone.utc), status="running")
+    db_session.add(ingestion_run)
+    db_session.commit()
+
     service = IngestionService(db_session)
-    with patch.object(service, "fetch_feed", return_value=None):
-        res = service.ingest_source(s)
-        # Should not crash and should set last_ingested_at
-        assert res["discovered"] == 0
+
+    def mock_fetch_error(url):
+        return None, None, "Connection failed"
+
+    with patch.object(service, "fetch_feed", side_effect=mock_fetch_error):
+        res = service.ingest_source(s, ingestion_run)
+        # Should not crash and should handle the error
+        assert res.status == "failed"
+        assert res.documents_discovered == 0

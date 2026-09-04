@@ -31,6 +31,8 @@ class SourceUpdate(BaseModel):
 class SourceResponse(SourceBase):
     id: int
     last_ingested_at: Optional[datetime] = None
+    last_attempted_at: Optional[datetime] = None
+    last_error: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

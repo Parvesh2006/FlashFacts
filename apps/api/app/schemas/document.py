@@ -7,11 +7,12 @@ class DocumentBase(BaseModel):
     title: str
     content: str
     url: str
-    published_at: datetime
+    published_at: datetime | None = None
 
 
 class DocumentCreate(DocumentBase):
     content_hash: str
+    source_guid: str | None = None
 
 
 class DocumentResponse(DocumentBase):

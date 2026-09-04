@@ -17,6 +17,13 @@ class DocumentRepository:
     def get_by_url(self, url: str) -> Optional[Document]:
         return self.db.query(Document).filter(Document.url == url).first()
 
+    def get_by_source_url(self, source_id: int, url: str) -> Optional[Document]:
+        return (
+            self.db.query(Document)
+            .filter(Document.source_id == source_id, Document.url == url)
+            .first()
+        )
+
     def create(self, doc_in: DocumentCreate) -> Document:
         doc = Document(**doc_in.model_dump())
         self.db.add(doc)

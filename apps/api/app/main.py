@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,6 +9,7 @@ from app.core.logging import setup_logging, logger
 from app.core.database import engine, Base, SessionLocal
 from app.api.router import api_router
 from app.models.source import Source
+from app.services.scheduler import ingestion_scheduler
 
 
 def seed_default_sources(db: Session = None):
@@ -144,7 +146,14 @@ async def lifespan(app: FastAPI):
         seed_default_sources()
     except Exception as e:
         logger.warning(f"Database initialization during lifespan skipped or failed: {e}")
+    scheduler_task = None
+    stop_event = asyncio.Event()
+    if settings.INGESTION_ENABLED:
+        scheduler_task = asyncio.create_task(ingestion_scheduler(stop_event))
     yield
+    if scheduler_task:
+        stop_event.set()
+        await scheduler_task
     logger.info("Shutting down FlashFacts API Server...")
 
 

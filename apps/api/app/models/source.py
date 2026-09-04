@@ -16,6 +16,8 @@ class Source(Base):
     reliability_score = Column(Float, nullable=False, default=1.0)
     enabled = Column(Boolean, nullable=False, default=True, index=True)
     last_ingested_at = Column(DateTime(timezone=True), nullable=True)
+    last_attempted_at = Column(DateTime(timezone=True), nullable=True)
+    last_error = Column(String(1024), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 

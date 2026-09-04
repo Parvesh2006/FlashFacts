@@ -13,7 +13,8 @@ class Document(Base):
     content = Column(Text, nullable=False)
     url = Column(String(1024), nullable=False)
     content_hash = Column(String(64), unique=True, nullable=False, index=True)
-    published_at = Column(DateTime(timezone=True), nullable=False, index=True)
+    source_guid = Column(String(1024), nullable=True, index=True)
+    published_at = Column(DateTime(timezone=True), nullable=True, index=True)
     crawled_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
     processed = Column(Boolean, nullable=False, default=False)
 
