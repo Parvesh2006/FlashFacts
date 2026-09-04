@@ -7,6 +7,7 @@ from app.models.entity import Entity, EventEntity
 from app.schemas.event import EventCreate, DomainStatResponse, EventResponse, EntityResponse
 from app.models.source import Source
 from app.schemas.source import SourceResponse
+from app.utils.hashing import normalize_text
 
 
 class EventRepository:
@@ -63,7 +64,14 @@ class EventRepository:
             if not name:
                 continue
 
-            entity = self.db.query(Entity).filter(Entity.name == name).first()
+            normalized_name = normalize_text(name)
+            entity = next(
+                (
+                    candidate for candidate in self.db.query(Entity).all()
+                    if normalize_text(candidate.name) == normalized_name
+                ),
+                None,
+            )
             if not entity:
                 entity = Entity(name=name, entity_type=ent_type)
                 self.db.add(entity)
@@ -158,6 +166,7 @@ class EventRepository:
             "title": event.title,
             "summary": event.summary,
             "domain": event.domain,
+            "event_type": event.event_type,
             "event_date": event.event_date,
             "published_at": event.published_at,
             "source_id": event.source_id,

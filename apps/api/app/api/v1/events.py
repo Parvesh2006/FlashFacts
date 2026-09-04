@@ -6,8 +6,18 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.schemas.event import EventResponse, EventListResponse
 from app.repositories.event_repository import EventRepository
+from app.services.enrichment import EventEnrichmentService
 
 router = APIRouter(prefix="/events", tags=["Events"])
+
+
+@router.post("/enrich")
+def enrich_events(
+    limit: int = Query(20, ge=1, le=200),
+    force: bool = Query(False),
+    db: Session = Depends(get_db),
+):
+    return EventEnrichmentService(db).enrich_batch(limit=limit, force=force)
 
 
 @router.get("", response_model=EventListResponse)

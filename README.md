@@ -124,6 +124,27 @@ Apply database migrations with `alembic upgrade head` before using an existing d
 
 The Day 1 live validation used the three development sources seeded by `tools/init_db.py` on 2026-09-04. The first run attempted 3 sources, succeeded for 3, discovered and inserted 57 documents, created 57 events, and completed in 7.87 seconds. The repeat run attempted 3 sources, succeeded for 3, skipped 57 duplicate documents, created 0 events, and completed in 2.39 seconds.
 
+## Event Intelligence (Day 2)
+
+New events can be enriched through the existing `AIProvider` abstraction. The fallback provider is deterministic and requires no API key; the OpenAI provider is selected only when `AI_PROVIDER=openai` and `AI_API_KEY` are configured. Provider failures and invalid responses fall back without breaking ingestion or event APIs.
+
+Enrichment output is validated with a Pydantic contract. Scores are constrained to 0-100, confidence to 0-1, summaries and explanations are length-limited, and entities are limited to known types. Entity names are checked against the source text before persistence, and normalized entity matching prevents duplicate records.
+
+The fallback importance score is explainable: it starts from a neutral baseline, adds domain significance and bounded impact-keyword signals, then applies the source reliability score and clamps the result to 0-100. It does not invent dates, claims, or unsupported entities.
+
+Processing states are `pending`, `processing`, `completed`, and `failed`. Completed events are skipped by default. Enrich a batch from the command line or API:
+
+```bash
+python tools/enrich_events.py --limit 20
+python tools/enrich_events.py --limit 20 --force
+```
+
+```text
+POST /api/v1/events/enrich?limit=20&force=false
+```
+
+Batch results report requested, processed, succeeded, failed, fallback, and skipped counts. `AI_MAX_INPUT_CHARS` limits content sent to a provider. These counts and event fields support later measurement of enrichment latency, fallback rate, score distribution, confidence, entity counts, and duplicate-entity rate.
+
 ---
 
 ## 📡 Backend API Reference

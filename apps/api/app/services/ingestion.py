@@ -20,6 +20,8 @@ from app.repositories.event_repository import EventRepository
 from app.services.extraction import EventExtractorService
 from app.services.deduplication import DeduplicationService
 from app.services.ai_provider import get_ai_provider
+from app.services.ai_provider import FallbackAIProvider
+from app.schemas.enrichment import EventEnrichment
 from app.utils.hashing import compute_content_hash
 from app.core.config import settings
 
@@ -237,11 +239,28 @@ class IngestionService:
                                 "entities": []
                             }
 
-                        event_candidate["summary"] = enrichment.get("summary", event_candidate["summary"])
-                        event_candidate["domain"] = enrichment.get("classification", event_candidate["domain"])
-                        event_candidate["why_it_matters"] = enrichment.get("why_it_matters")
-                        event_candidate["importance_score"] = enrichment.get("importance_score", 50)
-                        event_candidate["classification_confidence"] = enrichment.get("classification_confidence", 0.5)
+                        try:
+                            validated_enrichment = EventEnrichment.model_validate({
+                                **enrichment,
+                                "classification": enrichment.get("classification", event_candidate["domain"]),
+                            })
+                        except Exception as exc:
+                            logger.warning("AI output validation failed; using fallback: %s", exc)
+                            fallback = FallbackAIProvider().enrich_event(
+                                event_candidate["title"], doc.content,
+                                event_candidate["domain"], source.reliability_score,
+                            )
+                            validated_enrichment = EventEnrichment.model_validate({
+                                **fallback,
+                                "provider": "fallback",
+                                "used_fallback": True,
+                            })
+                        event_candidate["summary"] = validated_enrichment.summary or event_candidate["summary"]
+                        event_candidate["domain"] = validated_enrichment.classification
+                        event_candidate["event_type"] = validated_enrichment.event_type
+                        event_candidate["why_it_matters"] = validated_enrichment.why_it_matters
+                        event_candidate["importance_score"] = validated_enrichment.importance_score
+                        event_candidate["classification_confidence"] = validated_enrichment.classification_confidence
                         event_candidate["ai_processed_at"] = datetime.now(timezone.utc)
                         event_candidate["processing_status"] = "completed"
 
@@ -249,7 +268,7 @@ class IngestionService:
                         new_event = self.event_repo.create(event_in, document_id=doc.id)
 
                         # Attach Entities if extracted
-                        entities_data = enrichment.get("entities", [])
+                        entities_data = [entity.model_dump() for entity in validated_enrichment.entities]
                         if entities_data:
                             self.event_repo.attach_entities(new_event.id, entities_data)
 

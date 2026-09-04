@@ -6,6 +6,7 @@ from typing import Dict, Any, List, Optional
 import httpx
 
 from app.core.config import settings
+from app.schemas.enrichment import EventEnrichment
 
 logger = logging.getLogger("app")
 
@@ -163,7 +164,7 @@ class OpenAIProvider(AIProvider):
             "Return ONLY raw valid JSON."
         )
 
-        user_prompt = f"Title: {title}\nDomain Hint: {domain}\nContent: {content[:1500]}"
+        user_prompt = f"Title: {title}\nDomain Hint: {domain}\nContent: {content[:settings.AI_MAX_INPUT_CHARS]}"
 
         try:
             headers = {
@@ -186,15 +187,17 @@ class OpenAIProvider(AIProvider):
                     data = res.json()
                     content_str = data["choices"][0]["message"]["content"]
                     parsed = json.loads(content_str)
-                    
-                    return {
+
+                    validated = EventEnrichment.model_validate({
                         "summary": parsed.get("summary", title),
                         "why_it_matters": parsed.get("why_it_matters", "Significant event in domain."),
                         "importance_score": int(parsed.get("importance_score", 50)),
                         "classification": parsed.get("classification", domain),
                         "classification_confidence": float(parsed.get("classification_confidence", 0.95)),
+                        "event_type": parsed.get("event_type"),
                         "entities": parsed.get("entities", []),
-                    }
+                    })
+                    return validated.model_dump()
                 else:
                     logger.warning(f"OpenAI API returned status {res.status_code}. Using fallback.")
                     return self.fallback.enrich_event(title, content, domain, reliability_score)
@@ -213,5 +216,5 @@ def get_ai_provider() -> AIProvider:
 
     if provider_type == "openai" and api_key:
         return OpenAIProvider(api_key=api_key, model=model)
-    
+
     return FallbackAIProvider()

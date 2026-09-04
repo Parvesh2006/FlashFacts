@@ -17,6 +17,7 @@ class EventBase(BaseModel):
     title: str
     summary: str
     domain: str
+    event_type: Optional[str] = None
     event_date: date
     published_at: datetime
     source_id: int

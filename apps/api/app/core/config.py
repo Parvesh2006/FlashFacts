@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     AI_PROVIDER: str = "fallback"
     AI_API_KEY: str = ""
     AI_MODEL: str = "gpt-4o-mini"
+    AI_MAX_INPUT_CHARS: int = 6000
 
     # Ingestion
     INGESTION_ENABLED: bool = False

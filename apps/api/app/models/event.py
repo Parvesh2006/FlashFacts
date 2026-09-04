@@ -11,13 +11,14 @@ class Event(Base):
     title = Column(String(512), nullable=False, index=True)
     summary = Column(Text, nullable=False)
     domain = Column(String(100), nullable=False, index=True)
+    event_type = Column(String(100), nullable=True, index=True)
     event_date = Column(Date, nullable=False, index=True)
     published_at = Column(DateTime(timezone=True), nullable=False, index=True)
     source_id = Column(Integer, ForeignKey("sources.id"), nullable=False, index=True)
     source_url = Column(String(1024), nullable=False)
     confidence_score = Column(Float, nullable=False, default=1.0)
     dedup_hash = Column(String(64), unique=True, nullable=False, index=True)
-    
+
     # Phase 3A AI Intelligence Enrichment Fields
     why_it_matters = Column(Text, nullable=True)
     importance_score = Column(Integer, nullable=False, default=50, index=True)
