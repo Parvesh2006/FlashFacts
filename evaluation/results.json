@@ -1,0 +1,45 @@
+{
+  "timestamp": "2026-09-04T16:53:19.637460+00:00",
+  "dataset": {
+    "name": "Benchmark",
+    "version": "v1",
+    "size": 4
+  },
+  "metrics": {
+    "dataset": {
+      "name": "Benchmark",
+      "version": "v1",
+      "size": 4
+    },
+    "classification": {
+      "accuracy": 1.0
+    },
+    "event_type": {
+      "accuracy": 1.0
+    },
+    "entities": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "importance": {
+      "mae": 0.0,
+      "rmse": 0.0
+    },
+    "enrichment": {
+      "success_rate": 0.0,
+      "fallback_rate": 0.0,
+      "failure_rate": 0.0
+    },
+    "latency": {
+      "average_ms": 0.0,
+      "median_ms": 0.0,
+      "min_ms": 0.0,
+      "max_ms": 0.0
+    }
+  },
+  "software": {
+    "name": "FlashFacts",
+    "version": "1.0.0"
+  }
+}

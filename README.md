@@ -145,6 +145,52 @@ POST /api/v1/events/enrich?limit=20&force=false
 
 Batch results report requested, processed, succeeded, failed, fallback, and skipped counts. `AI_MAX_INPUT_CHARS` limits content sent to a provider. These counts and event fields support later measurement of enrichment latency, fallback rate, score distribution, confidence, entity counts, and duplicate-entity rate.
 
+## Evaluation & Observability (Day 3)
+
+FlashFacts now includes a deterministic evaluation layer for research and reproducibility. The benchmark dataset lives at `evaluation/benchmark_events.json` and uses synthetic benchmark entries explicitly marked as synthetic to avoid claiming real-world facts. Every item includes an `id`, title, content, expected domain, expected event type, expected importance score, and expected entity list.
+
+The evaluator measures:
+
+- Classification accuracy
+- Event-type accuracy
+- Named-entity precision, recall, and F1 using normalized matching with duplicate entity de-duplication
+- Importance-score MAE and RMSE
+- Enrichment success, fallback, failure, and skipped rates
+- Latency in milliseconds for average and median durations
+
+The evaluation service is implementation-agnostic and can be reused in tests or by downstream research tooling. It reads a dataset, compares expected labels against a prediction payload, and returns a stable JSON structure. The evaluation summary endpoint is available at `GET /api/v1/evaluation/summary`.
+
+### Benchmark dataset and methodology
+
+- Dataset file: `evaluation/benchmark_events.json`
+- Structured benchmark items: each row is deterministic and contains expected labels
+- Entity matching: names are normalized to lowercase, whitespace-normalized, and compared without case sensitivity
+- Duplicate entities are removed before scoring so repeated labels do not inflate precision or recall
+- Deterministic output: metrics are based only on input data and stored predictions, not current time values except metadata timestamps written by the CLI
+
+### Run evaluation
+
+```bash
+python tools/evaluate_events.py
+python tools/evaluate_events.py --dataset evaluation/benchmark_events.json
+python tools/evaluate_events.py --output evaluation/results.json
+```
+
+The CLI prints human-readable metrics and writes a JSON result file under `evaluation/results.json` when requested.
+
+### Interpreting results
+
+- Accuracy should be read as a percentage over valid benchmark rows only.
+- Empty or malformed datasets return zeroed metrics rather than throwing an exception so the evaluation pipeline remains resilient.
+- A successful enrichment is counted when processing completes without fallback. Fallback and failure rates are tracked separately for observability research.
+- Results are intended for internal benchmarking and model comparison, not for proving real-world event accuracy without a vetted ground-truth dataset.
+
+### Limitations
+
+- The bundled benchmark is synthetic by design to keep the project deterministic and offline-safe.
+- It does not represent a production ground-truth dataset for live event claims.
+- Real-world evaluation should add curated, reviewed benchmark corpora over time.
+
 ---
 
 ## 📡 Backend API Reference

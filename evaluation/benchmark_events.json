@@ -1,0 +1,59 @@
+{
+  "name": "Benchmark",
+  "version": "v1",
+  "items": [
+    {
+      "id": "benchmark-001",
+      "title": "OpenAI launches new AI model for healthcare analytics",
+      "content": "The synthetic benchmark event describes a fictional release of an AI model for healthcare analytics. OpenAI announces the system to help clinicians summarize patient records reliably.",
+      "expected_domain": "technology",
+      "expected_event_type": "announcement",
+      "expected_importance_score": 82,
+      "expected_entities": [
+        {"name": "OpenAI", "entity_type": "ORGANIZATION"},
+        {"name": "AI", "entity_type": "TECHNOLOGY"},
+        {"name": "healthcare", "entity_type": "CONCEPT"}
+      ],
+      "source_note": "synthetic benchmark data"
+    },
+    {
+      "id": "benchmark-002",
+      "title": "India expands climate monitoring satellite program",
+      "content": "A synthetic benchmark story notes that India expands a climate monitoring satellite program to improve regional forecasts and disaster warnings.",
+      "expected_domain": "science",
+      "expected_event_type": "launch",
+      "expected_importance_score": 74,
+      "expected_entities": [
+        {"name": "India", "entity_type": "COUNTRY"},
+        {"name": "climate monitoring", "entity_type": "CONCEPT"}
+      ],
+      "source_note": "synthetic benchmark data"
+    },
+    {
+      "id": "benchmark-003",
+      "title": "Global trade ministers sign digital commerce framework",
+      "content": "Synthetic benchmark reporting describes a digital commerce framework signed by international trade ministers to simplify customs procedures.",
+      "expected_domain": "economy",
+      "expected_event_type": "agreement",
+      "expected_importance_score": 68,
+      "expected_entities": [
+        {"name": "trade ministers", "entity_type": "ORGANIZATION"},
+        {"name": "customs", "entity_type": "CONCEPT"}
+      ],
+      "source_note": "synthetic benchmark data"
+    },
+    {
+      "id": "benchmark-004",
+      "title": "Championship league final draws record attendance",
+      "content": "Synthetic benchmark content says a championship league final set a record attendance and boosted regional tourism and broadcast revenue.",
+      "expected_domain": "sports",
+      "expected_event_type": "event",
+      "expected_importance_score": 61,
+      "expected_entities": [
+        {"name": "championship", "entity_type": "EVENT"},
+        {"name": "tourism", "entity_type": "CONCEPT"}
+      ],
+      "source_note": "synthetic benchmark data"
+    }
+  ]
+}
