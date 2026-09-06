@@ -1,0 +1,29 @@
+document_id,expected_event_id,expected_domain,expected_is_duplicate,expected_entities,expected_importance,reviewer_notes
+# Template for manual annotation of ground-truth data for FlashFacts research
+#
+# This CSV file serves as a template for manually labeling documents with their
+# expected event_id and other properties to evaluate ingestion accuracy.
+#
+# Columns:
+# - document_id: ID from the documents table
+# - expected_event_id: The event this document should be linked to (NULL if no event)
+# - expected_domain: Expected domain classification (AI, Technology, Politics, etc.)
+# - expected_is_duplicate: TRUE if this is a duplicate of another document, FALSE otherwise
+# - expected_entities: Comma-separated list of expected named entities
+# - expected_importance: Expected importance score (0-100)
+# - reviewer_notes: Reviewer comments/justification
+#
+# Instructions:
+# 1. Do NOT populate this file with fake data
+# 2. Manual review should be performed by domain experts
+# 3. One document per row
+# 4. For duplicate detection: review the document content and compare to existing documents
+# 5. For event linking: group documents that describe the same real-world event
+# 6. For entities: identify key person names, organizations, locations, technologies
+#
+# Example (do not use these as actual data unless manually verified):
+# 1,NULL,Technology,TRUE,Google,45,"Duplicate of document 5 - same content"
+# 2,NULL,Technology,FALSE,"Microsoft,Azure,Cloud",75,"Microsoft announces new cloud features"
+# 3,1,AI,FALSE,"OpenAI,ChatGPT,GPT-4",95,"First document reporting OpenAI's quarterly results"
+# 4,1,AI,FALSE,"OpenAI,GPT-4",90,"Reuters reports on OpenAI's quarterly results - same event as doc 3"
+#
