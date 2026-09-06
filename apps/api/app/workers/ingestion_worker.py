@@ -26,7 +26,7 @@ def run_once():
 def run_ingestion_worker(loop: bool = False, interval_minutes: int = 15):
     setup_logging()
     logger.info("Initializing FlashFacts Scheduled Ingestion Worker...")
-    
+
     # Ensure database schema & default sources are present
     try:
         Base.metadata.create_all(bind=engine)

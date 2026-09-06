@@ -25,7 +25,7 @@ class EventExtractorService:
     def extract_event_candidate(self, document: Document, source: Source) -> Dict[str, Any]:
         clean_title = self.clean_text(document.title)
         clean_content = self.clean_text(document.content)
-        
+
         # Summary truncation if too long
         summary = clean_content
         if len(summary) > 500:

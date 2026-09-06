@@ -76,7 +76,7 @@ class KeywordDomainClassifier(BaseClassifier):
 
     def classify_with_confidence(self, title: str, content: str, default_domain: str = "Technology") -> Tuple[str, float]:
         combined_text = normalize_text(f"{title} {content}")
-        
+
         scores: Dict[str, int] = {}
         for domain, keywords in self.DOMAIN_KEYWORDS.items():
             score = 0

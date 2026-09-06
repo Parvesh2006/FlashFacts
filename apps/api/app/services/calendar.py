@@ -17,7 +17,7 @@ class CalendarService:
         parts = month_str.split("-")
         if len(parts) != 2:
             raise ValueError("Invalid month format. Expected 'YYYY-MM'.")
-        
+
         year = int(parts[0])
         month = int(parts[1])
 

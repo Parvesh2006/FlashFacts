@@ -18,7 +18,7 @@ def test_fallback_ai_provider_enrichment():
     assert 0 <= enrichment["importance_score"] <= 100
     assert enrichment["classification"] == domain
     assert 0.0 <= enrichment["classification_confidence"] <= 1.0
-    
+
     entities = enrichment["entities"]
     assert isinstance(entities, list)
     entity_names = [e["name"] for e in entities]

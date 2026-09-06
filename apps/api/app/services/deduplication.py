@@ -24,7 +24,7 @@ class DeduplicationService:
         Check if an event matching title/date dedup hash already exists.
         """
         event_in, dedup_hash = self.prepare_event_candidate(candidate_data)
-        
+
         # Check by dedup_hash
         existing_event = self.event_repo.get_by_dedup_hash(dedup_hash)
         if existing_event:

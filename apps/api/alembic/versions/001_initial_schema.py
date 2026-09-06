@@ -1,7 +1,7 @@
 """001_initial_schema
 
 Revision ID: 001_initial_schema
-Revises: 
+Revises:
 Create Date: 2026-08-18 21:34:00.000000
 
 """
@@ -117,7 +117,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_index('ix_processing_jobs_id', table_name='processing_jobs')
     op.drop_table('processing_jobs')
-    
+
     op.drop_index('ix_event_sources_document_id', table_name='event_sources')
     op.drop_index('ix_event_sources_event_id', table_name='event_sources')
     op.drop_index('ix_event_sources_id', table_name='event_sources')
