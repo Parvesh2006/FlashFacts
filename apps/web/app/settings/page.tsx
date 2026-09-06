@@ -58,7 +58,7 @@ export default function SettingsPage() {
           <span>System Configuration & Telemetry</span>
         </div>
         <h1 className="headline text-3xl md:text-4xl">
-          Application Settings
+          Settings
         </h1>
         <p className="body-copy text-sm">
           Environment configuration, API connection state, and source registry status.

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -47,15 +47,18 @@ export function SidebarNavItem({ item, pathname, collapsed = false }: SidebarNav
     <Link
       href={item.href}
       aria-current={isActive ? "page" : undefined}
+      aria-label={collapsed ? item.name : undefined}
       title={collapsed ? item.name : undefined}
-      className={`sidebar-nav-item group flex items-center gap-3 ${
+      className={`sidebar-nav-item group flex items-center ${collapsed ? "sidebar-nav-item-collapsed justify-center gap-0 px-2" : "gap-3"} ${
         isActive ? "sidebar-nav-item-active" : ""
-      } ${collapsed ? "sidebar-nav-item-collapsed justify-center px-2" : ""}`}
+      }`}
     >
       <span className="sidebar-nav-icon flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg">
         <Icon className="h-4 w-4" />
       </span>
-      <span className={`sidebar-label min-w-0 flex-1 truncate ${collapsed ? "sidebar-label-collapsed" : ""}`}>{item.name}</span>
+      <span className={`sidebar-label min-w-0 flex-1 truncate ${collapsed ? "sidebar-label-collapsed" : ""}`}>
+        {item.name}
+      </span>
       {item.badge && !collapsed && (
         <span className="soft-badge flex-shrink-0 px-1.5 py-0.5 text-[10px] font-mono">
           {item.badge}
@@ -65,9 +68,13 @@ export function SidebarNavItem({ item, pathname, collapsed = false }: SidebarNav
   );
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  collapsed: boolean;
+  onToggle: () => void;
+}
+
+export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
   const getItem = (href: string) => navItems.find((item) => item.href === href)!;
   const sections = [
     { label: "MAIN", items: [getItem("/"), getItem("/explore"), getItem("/calendar")] },
@@ -76,31 +83,39 @@ export function Sidebar() {
   ];
   const settings = getItem("/settings");
 
+  const toggleLabel = collapsed ? "Expand sidebar" : "Collapse sidebar";
+
   return (
-    <aside className={`hidden lg:flex flex-shrink-0 flex-col border-r h-screen sticky top-0 z-30 select-none bg-[var(--surface)] transition-[width] duration-[250ms] ${collapsed ? "w-[76px]" : "w-[272px]"}`}>
-      <div className={`border-b px-5 py-6 ${collapsed ? "flex flex-col items-center gap-4" : ""}`}>
-        <Link href="/" className={`flex items-center gap-3 group ${collapsed ? "justify-center" : ""}`} title={collapsed ? "FlashFacts overview" : undefined}>
+    <aside
+      className={`hidden lg:flex h-screen sticky top-0 z-30 select-none flex-shrink-0 flex-col border-r bg-[var(--surface)] transition-[width] duration-300 ease-out ${collapsed ? "w-[76px]" : "w-[272px]"}`}
+      aria-label={collapsed ? "Collapsed sidebar" : "Expanded sidebar"}
+    >
+      <div className={`border-b ${collapsed ? "px-3" : "px-5"} py-6 ${collapsed ? "flex flex-col items-center gap-4" : "flex items-center justify-between gap-3"}`}>
+        <Link
+          href="/"
+          className={`flex min-w-0 items-center gap-3 group ${collapsed ? "justify-center" : ""}`}
+          title={collapsed ? "FlashFacts overview" : undefined}
+          aria-label="FlashFacts overview"
+        >
           <div className="brand-mark flex h-10 w-10 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105">
-            <Zap className="w-4 h-4 fill-current" />
+            <Zap className="h-4 w-4 fill-current" />
           </div>
           <div className={`sidebar-label ${collapsed ? "sidebar-label-collapsed" : ""}`}>
             <h1 className="flex items-center gap-1.5 text-base font-extrabold tracking-normal text-[var(--text-primary)]">
               FLASHFACTS
-              <span className="soft-badge text-[10px] font-mono uppercase px-1.5 py-0.5">
-                v2.5
-              </span>
+              <span className="soft-badge px-1.5 py-0.5 text-[10px] font-mono uppercase">v2.5</span>
             </h1>
-            <p className="meta-text mt-1 uppercase">
-              Current Affairs Intelligence
-            </p>
+            <p className="meta-text mt-1 uppercase">Current Affairs Intelligence</p>
           </div>
         </Link>
         <button
           type="button"
-          onClick={() => setCollapsed((current) => !current)}
-          className={`sidebar-collapse-button button-base button-ghost icon-button ${collapsed ? "" : "ml-auto"}`}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          onClick={onToggle}
+          className="sidebar-collapse-button button-base button-ghost icon-button"
+          aria-label={toggleLabel}
+          aria-expanded={!collapsed}
+          title={toggleLabel}
+          data-collapsed={collapsed}
         >
           {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
         </button>
@@ -109,7 +124,10 @@ export function Sidebar() {
       <div className={`flex-1 space-y-7 overflow-y-auto py-6 ${collapsed ? "px-3" : "px-4"}`}>
         {sections.map((section) => (
           <section key={section.label} aria-labelledby={`sidebar-${section.label.toLowerCase()}`}>
-            <h2 id={`sidebar-${section.label.toLowerCase()}`} className={`eyebrow mb-2 px-2 text-[10px] tracking-[0.14em] ${collapsed ? "sr-only" : ""}`}>
+            <h2
+              id={`sidebar-${section.label.toLowerCase()}`}
+              className={`eyebrow mb-2 px-2 text-[10px] tracking-[0.14em] ${collapsed ? "hidden" : ""}`}
+            >
               {section.label}
             </h2>
             <div className="space-y-2">
@@ -122,14 +140,14 @@ export function Sidebar() {
       </div>
 
       <div className={`space-y-3 border-t bg-[var(--surface-muted)]/45 p-4 ${collapsed ? "px-3" : ""}`}>
-        <p className={`eyebrow px-2 text-[10px] tracking-[0.14em] ${collapsed ? "sr-only" : ""}`}>BOTTOM AREA</p>
+        <p className={`eyebrow px-2 text-[10px] tracking-[0.14em] ${collapsed ? "hidden" : ""}`}>BOTTOM AREA</p>
         <SidebarNavItem item={settings} pathname={pathname} collapsed={collapsed} />
         <div className={`flex items-center justify-between border-t pt-3 meta-text ${collapsed ? "justify-center" : ""}`}>
           <span className="flex items-center gap-1.5" title="API Connected">
             <span className="h-2 w-2 rounded-full bg-[var(--success)] animate-pulse" />
-            <span className={collapsed ? "hidden" : ""}>API Connected</span>
+            {!collapsed && <span>API Connected</span>}
           </span>
-          <span className={collapsed ? "hidden" : ""}>FastAPI</span>
+          {!collapsed && <span>FastAPI</span>}
         </div>
       </div>
     </aside>

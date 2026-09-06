@@ -18,7 +18,7 @@ export function BackButton({
   const router = useRouter();
 
   const handleBack = () => {
-    if (window.history.length > 1) {
+    if (window.history.state?.idx > 0) {
       router.back();
       return;
     }

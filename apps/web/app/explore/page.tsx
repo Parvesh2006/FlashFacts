@@ -110,7 +110,7 @@ function ExploreContent() {
             <span>Event Explorer</span>
           </div>
           <h1 className="headline text-3xl md:text-4xl">
-            Current Affairs Database
+            Explore Current Affairs
           </h1>
           <p className="body-copy text-sm">
             Filter, search, and navigate current affairs events by category, date range, or keywords.

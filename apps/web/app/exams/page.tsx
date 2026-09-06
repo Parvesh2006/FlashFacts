@@ -36,7 +36,7 @@ export default function ExamsPage() {
           <span>Competitive Exam Preparation Engine</span>
         </div>
         <h1 className="headline text-3xl md:text-4xl">
-          Exam Relevance & Question Bank
+          Exam Intelligence
         </h1>
         <p className="body-copy text-sm">
           Targeted current affairs scoring, high-yield topic filtering, and MCQ generation for competitive exams.

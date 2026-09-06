@@ -323,7 +323,13 @@
     font-size: 0.82rem;
     font-weight: 600;
     letter-spacing: 0;
-    transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+    transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease, transform 200ms ease, box-shadow 200ms ease, width 260ms ease, padding 260ms ease;
+  }
+
+  .sidebar-nav-item-collapsed {
+    width: 100%;
+    padding-inline: 0.35rem;
+    justify-content: center;
   }
 
   .sidebar-nav-item::before {
@@ -380,13 +386,37 @@
   .sidebar-label {
     max-width: 12rem;
     opacity: 1;
-    transition: max-width 250ms ease, opacity 180ms ease;
+    transition: max-width 250ms ease, opacity 180ms ease, transform 250ms ease;
   }
 
   .sidebar-label-collapsed {
     max-width: 0;
     opacity: 0;
     overflow: hidden;
+    transform: translateX(-8px);
+  }
+
+  .sidebar-collapse-button {
+    flex-shrink: 0;
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+    transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease, transform 250ms ease, box-shadow 200ms ease;
+  }
+
+  .sidebar-collapse-button svg {
+    transition: transform 220ms ease;
+  }
+
+  .sidebar-collapse-button[data-collapsed="true"] svg {
+    transform: rotate(180deg);
+  }
+
+  .sidebar-collapse-button:hover svg {
+    transform: translateX(1px);
+  }
+
+  .sidebar-collapse-button[data-collapsed="true"]:hover svg {
+    transform: rotate(180deg) translateX(1px);
   }
 
   .skeleton-shimmer {

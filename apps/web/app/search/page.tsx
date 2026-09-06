@@ -59,7 +59,7 @@ function SearchContent() {
           <span>Keyword Intelligence Search</span>
         </div>
         <h1 className="headline text-3xl md:text-4xl">
-          Search Current Affairs
+          Search FlashFacts
         </h1>
         <p className="body-copy text-sm">
           Query indexed news titles, summaries, and domain classifications.

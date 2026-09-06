@@ -139,7 +139,7 @@ export function CalendarView() {
             <span>Temporal Event Explorer</span>
           </div>
           <h1 className="headline text-3xl md:text-4xl">
-            Current Affairs Calendar
+            Historical Intelligence Calendar
           </h1>
           <p className="body-copy text-sm">
             Browse indexed news events day-by-day across all domain categories.
