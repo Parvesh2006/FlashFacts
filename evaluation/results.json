@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-04T16:53:19.637460+00:00",
+  "timestamp": "2026-09-10T14:14:08.106667+00:00",
   "dataset": {
     "name": "Benchmark",
     "version": "v1",
@@ -18,26 +18,108 @@
       "accuracy": 1.0
     },
     "entities": {
-      "precision": 0.0,
-      "recall": 0.0,
-      "f1": 0.0
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
     },
     "importance": {
-      "mae": 0.0,
-      "rmse": 0.0
+      "mae": 6.0,
+      "rmse": 7.582875
     },
     "enrichment": {
-      "success_rate": 0.0,
-      "fallback_rate": 0.0,
+      "success_rate": 1.0,
+      "fallback_rate": 1.0,
       "failure_rate": 0.0
     },
     "latency": {
-      "average_ms": 0.0,
-      "median_ms": 0.0,
-      "min_ms": 0.0,
-      "max_ms": 0.0
+      "average_ms": 1.064825,
+      "median_ms": 0.5684,
+      "min_ms": 0.3043,
+      "max_ms": 2.8182
     }
   },
+  "predictions": [
+    {
+      "id": "benchmark-001",
+      "domain": "technology",
+      "classification": "technology",
+      "event_type": "announcement",
+      "importance_score": 82,
+      "provider": "fallback",
+      "used_fallback": true,
+      "entities": [
+        {
+          "name": "OpenAI",
+          "entity_type": "ORGANIZATION"
+        },
+        {
+          "name": "AI",
+          "entity_type": "TECHNOLOGY"
+        },
+        {
+          "name": "healthcare",
+          "entity_type": "CONCEPT"
+        }
+      ]
+    },
+    {
+      "id": "benchmark-002",
+      "domain": "science",
+      "classification": "science",
+      "event_type": "launch",
+      "importance_score": 64,
+      "provider": "fallback",
+      "used_fallback": true,
+      "entities": [
+        {
+          "name": "India",
+          "entity_type": "COUNTRY"
+        },
+        {
+          "name": "climate monitoring",
+          "entity_type": "CONCEPT"
+        }
+      ]
+    },
+    {
+      "id": "benchmark-003",
+      "domain": "economy",
+      "classification": "economy",
+      "event_type": "agreement",
+      "importance_score": 71,
+      "provider": "fallback",
+      "used_fallback": true,
+      "entities": [
+        {
+          "name": "trade ministers",
+          "entity_type": "ORGANIZATION"
+        },
+        {
+          "name": "customs",
+          "entity_type": "CONCEPT"
+        }
+      ]
+    },
+    {
+      "id": "benchmark-004",
+      "domain": "sports",
+      "classification": "sports",
+      "event_type": "event",
+      "importance_score": 72,
+      "provider": "fallback",
+      "used_fallback": true,
+      "entities": [
+        {
+          "name": "championship",
+          "entity_type": "EVENT"
+        },
+        {
+          "name": "tourism",
+          "entity_type": "CONCEPT"
+        }
+      ]
+    }
+  ],
   "software": {
     "name": "FlashFacts",
     "version": "1.0.0"

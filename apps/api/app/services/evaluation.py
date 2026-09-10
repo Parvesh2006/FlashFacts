@@ -137,6 +137,7 @@ def evaluate_benchmark(
 ) -> Dict[str, Any]:
     items = _as_dataset_items(dataset)
     valid_items = [item for item in items if _valid_benchmark_item(item)]
+    strict_predictions = predictions is not None
     prediction_lookup = {str(pred.get("id")): pred for pred in (predictions or []) if isinstance(pred, dict) and pred.get("id") is not None}
 
     classification_total = 0
@@ -163,8 +164,12 @@ def evaluate_benchmark(
         prediction = prediction_lookup.get(item_id)
         expected_domain = normalize_text(item.get("expected_domain"))
         expected_event_type = normalize_text(item.get("expected_event_type"))
-        pred_domain = normalize_text((prediction or {}).get("domain") or (prediction or {}).get("classification") or item.get("expected_domain"))
-        pred_event_type = normalize_text((prediction or {}).get("event_type") or item.get("expected_event_type"))
+        if strict_predictions:
+            pred_domain = normalize_text((prediction or {}).get("domain") or (prediction or {}).get("classification"))
+            pred_event_type = normalize_text((prediction or {}).get("event_type"))
+        else:
+            pred_domain = normalize_text((prediction or {}).get("domain") or (prediction or {}).get("classification") or item.get("expected_domain"))
+            pred_event_type = normalize_text((prediction or {}).get("event_type") or item.get("expected_event_type"))
 
         if expected_domain:
             classification_total += 1
@@ -182,7 +187,12 @@ def evaluate_benchmark(
         entity_f1_total += entity_metrics["f1"]
 
         expected_score = float(item.get("expected_importance_score", 0) or 0)
-        pred_score = float((prediction or {}).get("importance_score", expected_score) or expected_score)
+        if strict_predictions:
+            raw_predicted = (prediction or {}).get("importance_score")
+            pred_score = float(raw_predicted) if raw_predicted is not None else 0.0
+        else:
+            raw_predicted = (prediction or {}).get("importance_score", expected_score)
+            pred_score = float(raw_predicted) if raw_predicted is not None else expected_score
         importance_errors.append(abs(pred_score - expected_score))
         expected_scores.append(expected_score)
         predicted_scores.append(pred_score)

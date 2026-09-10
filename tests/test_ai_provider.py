@@ -42,3 +42,61 @@ def test_openai_provider_fallback_when_no_key():
 def test_get_ai_provider_factory():
     provider = get_ai_provider()
     assert provider is not None
+
+
+def test_fallback_infers_domain_and_event_type_from_neutral_hint():
+    provider = FallbackAIProvider()
+    enrichment = provider.enrich_event(
+        title="Championship league final draws record attendance",
+        content="The final boosted regional tourism and broadcast revenue.",
+        domain="unknown",
+    )
+
+    assert enrichment["classification"] == "sports"
+    assert enrichment["event_type"] == "event"
+    assert enrichment["used_fallback"] is True
+
+
+def test_fallback_domain_and_event_type_handle_announcement_semantics():
+    provider = FallbackAIProvider()
+    enrichment = provider.enrich_event(
+        title="OpenAI launches new AI model for healthcare analytics",
+        content="OpenAI announces the model to help clinicians summarize patient records reliably.",
+        domain="unknown",
+    )
+
+    assert enrichment["classification"] == "technology"
+    assert enrichment["event_type"] == "announcement"
+
+
+def test_fallback_extracts_benchmark_entities_from_source_text():
+    provider = FallbackAIProvider()
+    title = "India expands climate monitoring satellite program"
+    content = "Trade ministers sign a customs agreement while the championship final boosts tourism."
+    enrichment = provider.enrich_event(title=title, content=content, domain="unknown")
+    names = {entity["name"] for entity in enrichment["entities"]}
+
+    assert "India" in names
+    assert "climate monitoring" in names
+    assert "trade ministers" in names
+    assert "customs" in names
+    assert "championship" in names
+    assert "tourism" in names
+
+
+def test_fallback_importance_score_is_bounded_and_deterministic():
+    provider = FallbackAIProvider()
+    first = provider.enrich_event(
+        title="AI partnership accelerates healthcare research and policy rollout",
+        content="OpenAI and public health agencies announce a broad digital health initiative.",
+        domain="unknown",
+    )
+    second = provider.enrich_event(
+        title="AI partnership accelerates healthcare research and policy rollout",
+        content="OpenAI and public health agencies announce a broad digital health initiative.",
+        domain="unknown",
+    )
+
+    assert first["importance_score"] == second["importance_score"]
+    assert 0 <= first["importance_score"] <= 100
+    assert isinstance(first["importance_score"], int)

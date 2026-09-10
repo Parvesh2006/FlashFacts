@@ -81,6 +81,37 @@ def test_event_type_accuracy(sample_benchmark, sample_predictions):
     assert result["event_type"]["accuracy"] == pytest.approx(1.0)
 
 
+def test_strict_evaluation_does_not_fill_missing_predictions(sample_benchmark):
+    result = evaluate_benchmark(
+        sample_benchmark,
+        predictions=[{"id": "benchmark-001", "entities": []}],
+    )
+
+    assert result["classification"]["accuracy"] == pytest.approx(0.0)
+    assert result["event_type"]["accuracy"] == pytest.approx(0.0)
+    assert result["importance"]["mae"] == pytest.approx(78.0)
+    assert result["importance"]["rmse"] == pytest.approx(78.102497)
+    assert result["entities"]["recall"] == pytest.approx(0.0)
+
+
+def test_strict_evaluation_treats_missing_importance_as_zero_and_penalizes_missing_prediction():
+    result = evaluate_benchmark(
+        [{
+            "id": "b-1",
+            "title": "AI launches healthcare policy tool",
+            "content": "OpenAI announces an AI tool for healthcare policy reporting.",
+            "expected_domain": "technology",
+            "expected_event_type": "announcement",
+            "expected_importance_score": 82,
+            "expected_entities": [{"name": "OpenAI", "entity_type": "ORGANIZATION"}],
+        }],
+        predictions=[{"id": "b-1", "domain": "technology", "event_type": "announcement", "entities": []}],
+    )
+
+    assert result["importance"]["mae"] == pytest.approx(82.0)
+    assert result["importance"]["rmse"] == pytest.approx(82.0)
+
+
 def test_entity_precision_recall_f1(sample_benchmark, sample_predictions):
     result = evaluate_benchmark(sample_benchmark, predictions=sample_predictions)
     assert result["entities"]["precision"] == pytest.approx(1.0)
@@ -194,3 +225,14 @@ def test_load_benchmark_dataset(tmp_path):
     data = load_benchmark_dataset(path)
     assert data["dataset"]["name"] == "Test Bench"
     assert data["dataset"]["size"] == 1
+
+
+def test_summary_endpoint_returns_404_for_missing_or_invalid_results(tmp_path, monkeypatch, client):
+    invalid_path = tmp_path / "missing-results.json"
+    monkeypatch.setattr("app.api.v1.evaluation.DEFAULT_RESULTS_PATH", invalid_path)
+    response = client.get("/api/v1/evaluation/summary")
+    assert response.status_code == 404
+
+    invalid_path.write_text("{not valid json}", encoding="utf-8")
+    response = client.get("/api/v1/evaluation/summary")
+    assert response.status_code == 404

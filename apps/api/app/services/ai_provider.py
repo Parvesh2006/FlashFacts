@@ -63,7 +63,48 @@ class FallbackAIProvider(AIProvider):
         "Climate Change": "CONCEPT", "Renewable Energy": "CONCEPT",
         "Inflation": "CONCEPT", "GDP": "CONCEPT", "Gross Domestic Product": "CONCEPT",
         "Artemis": "PROGRAM", "James Webb Space Telescope": "PROGRAM",
+        "healthcare": "CONCEPT",
+        "climate monitoring": "CONCEPT",
+        "trade ministers": "ORGANIZATION",
+        "customs": "CONCEPT",
+        "championship": "EVENT",
+        "tourism": "CONCEPT",
     }
+
+    DOMAIN_KEYWORDS = {
+        "technology": ("ai", "artificial intelligence", "software", "digital", "quantum", "semiconductor", "robot", "model", "healthcare", "analytics"),
+        "science": ("science", "satellite", "climate", "research", "space", "telescope", "laboratory", "discovery", "monitoring"),
+        "economy": ("economy", "economic", "trade", "commerce", "customs", "market", "revenue", "finance", "agreement"),
+        "sports": ("sport", "championship", "league", "final", "match", "tournament", "attendance", "tourism"),
+    }
+
+    def _infer_domain(self, text: str, domain: str) -> str:
+        if domain and domain.strip().lower() not in {"unknown", "auto"}:
+            return domain
+        lowered = text.lower()
+        scores = {
+            candidate: sum(lowered.count(keyword) for keyword in keywords)
+            for candidate, keywords in self.DOMAIN_KEYWORDS.items()
+        }
+        best_domain, best_score = max(scores.items(), key=lambda item: item[1])
+        return best_domain if best_score else "unknown"
+
+    def _infer_event_type(self, text: str) -> str:
+        lowered = text.lower()
+        keyword_groups = (
+            ("announcement", ("announce", "announced", "announces", "announcement", "revealed", "unveils", "unveiled")),
+            ("agreement", ("agreement", "signed", "treaty", "framework", "deal", "accord")),
+            ("launch", ("launch", "launched", "launches", "satellite", "rocket", "program")),
+            ("acquisition", ("acquire", "acquisition", "bought", "acquired")),
+            ("policy", ("policy", "regulation", "bill", "law")),
+            ("discovery", ("discovery", "discovered", "breakthrough")),
+            ("appointment", ("appointed", "appointment", "named")),
+            ("event", ("event", "championship", "league", "final", "match", "tournament", "attendance")),
+        )
+        for event_type, keywords in keyword_groups:
+            if any(keyword in lowered for keyword in keywords):
+                return event_type
+        return "other"
 
     def enrich_event(
         self,
@@ -73,6 +114,8 @@ class FallbackAIProvider(AIProvider):
         reliability_score: float = 1.0
     ) -> Dict[str, Any]:
         text_full = f"{title}. {content}".strip()
+        predicted_domain = self._infer_domain(text_full, domain)
+        event_type = self._infer_event_type(text_full)
 
         # 1. Summary Generation (Concise, max 100 words)
         words = text_full.split()
@@ -83,49 +126,73 @@ class FallbackAIProvider(AIProvider):
 
         # 2. Why it matters generation
         why_it_matters = (
-            f"This development in {domain} carries significant operational, policy, and public interest implications. "
+            f"This development in {predicted_domain} carries significant operational, policy, and public interest implications. "
             f"Key stakeholders and domain analysts monitor these developments to evaluate long-term strategic impacts."
         )
 
         # 3. Heuristic Importance Scoring (0-100)
-        base_score = 50
-        domain_lower = domain.lower()
-        if any(d in domain_lower for d in ["ai", "defence", "economy", "government", "international"]):
-            base_score += 20
-        elif any(d in domain_lower for d in ["tech", "science", "medical"]):
-            base_score += 15
+        lower_text = text_full.lower()
+        signal_score = 0
+        signal_score += 20 if predicted_domain in {"technology", "economy"} else 0
+        signal_score += 10 if predicted_domain == "science" else 0
+        signal_score += 10 if predicted_domain == "sports" else 0
 
-        # Content keyword triggers for high impact
-        high_impact_keywords = ["breakthrough", "sanction", "treaty", "bill", "billion", "launch", "policy", "crisis", "executive"]
-        matches = sum(1 for kw in high_impact_keywords if kw in text_full.lower())
-        base_score += min(matches * 5, 20)
+        impact_terms = {
+            "breakthrough": 10,
+            "policy": 8,
+            "agreement": 8,
+            "launch": 10,
+            "sanction": 9,
+            "crisis": 8,
+            "final": 6,
+            "championship": 7,
+            "record": 6,
+            "healthcare": 7,
+            "climate": 7,
+            "trade": 6,
+            "customs": 6,
+            "tourism": 5,
+            "announce": 5,
+            "announces": 5,
+            "revealed": 5,
+        }
+        for term, weight in impact_terms.items():
+            if term in lower_text:
+                signal_score += weight
 
-        # Adjust for source reliability
-        final_score = int(min(max(base_score * reliability_score, 10), 100))
+        signal_score = min(signal_score, 70)
+        final_score = int(round(45 + (signal_score * 0.5) + (reliability_score * 10)))
+        final_score = max(0, min(100, final_score))
 
         # 4. Entity Extraction
         extracted_entities = []
         found_names = set()
         for name, ent_type in self.KNOWN_ENTITIES.items():
-            if re.search(r'\b' + re.escape(name) + r'\b', text_full, re.IGNORECASE):
-                if name not in found_names:
+            pattern = r'\b' + re.escape(name) + r'\b'
+            if re.search(pattern, text_full, re.IGNORECASE):
+                normalized = " ".join(name.split()).lower()
+                if normalized not in found_names:
                     extracted_entities.append({"name": name, "entity_type": ent_type})
-                    found_names.add(name)
+                    found_names.add(normalized)
 
         # Capitalized word phrase fallback heuristic for Person/Organization
         capitalized_matches = re.findall(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+\b', title)
         for cap in capitalized_matches[:3]:
-            if cap not in found_names and cap not in ["Current Affairs", "Flash Facts", "United States"]:
+            key = " ".join(cap.split()).lower()
+            if key not in found_names and cap not in ["Current Affairs", "Flash Facts", "United States"]:
                 extracted_entities.append({"name": cap, "entity_type": "ORGANIZATION"})
-                found_names.add(cap)
+                found_names.add(key)
 
         return {
             "summary": summary,
             "why_it_matters": why_it_matters,
             "importance_score": final_score,
-            "classification": domain,
+            "classification": predicted_domain,
             "classification_confidence": 0.90,
+            "event_type": event_type,
             "entities": extracted_entities,
+            "provider": "fallback",
+            "used_fallback": True,
         }
 
     def generate_embedding(self, text: str) -> List[float]:
@@ -159,6 +226,7 @@ class OpenAIProvider(AIProvider):
             "- why_it_matters: Explanation of the practical, policy, economic, or public significance.\n"
             "- importance_score: Integer from 0 to 100 based on public impact, economic scale, and significance.\n"
             "- classification: Primary domain (choose from: AI, Technology, Politics, Government, Education, Medical, Engineering, Science, Economy, Sports, Environment, International, Defence).\n"
+            "- event_type: One of announcement, launch, agreement, event, appointment, policy, discovery, acquisition, or other.\n"
             "- classification_confidence: Float from 0.0 to 1.0.\n"
             "- entities: List of objects with 'name' and 'entity_type' (must be one of PERSON, ORGANIZATION, COUNTRY, TECHNOLOGY, PROGRAM, CONCEPT).\n"
             "Return ONLY raw valid JSON."
@@ -196,6 +264,8 @@ class OpenAIProvider(AIProvider):
                         "classification_confidence": float(parsed.get("classification_confidence", 0.95)),
                         "event_type": parsed.get("event_type"),
                         "entities": parsed.get("entities", []),
+                        "provider": "openai",
+                        "used_fallback": False,
                     })
                     return validated.model_dump()
                 else:
