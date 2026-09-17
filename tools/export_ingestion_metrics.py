@@ -34,9 +34,9 @@ def export_ingestion_runs(db: Session, output_dir: Path):
     """Export all ingestion runs to CSV."""
     repo = IngestionRunRepository(db)
     runs = repo.list_runs(limit=10000)  # Large limit to get all
-
+    
     output_file = output_dir / "ingestion_runs.csv"
-
+    
     with open(output_file, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow([
@@ -55,7 +55,7 @@ def export_ingestion_runs(db: Session, output_dir: Path):
             "events_deduplicated",
             "error_count"
         ])
-
+        
         for run in runs:
             writer.writerow([
                 run.id,
@@ -73,7 +73,7 @@ def export_ingestion_runs(db: Session, output_dir: Path):
                 run.events_deduplicated,
                 run.error_count
             ])
-
+    
     print(f"Exported {len(runs)} ingestion runs to {output_file}")
     return len(runs)
 
@@ -83,15 +83,15 @@ def export_source_metrics(db: Session, output_dir: Path):
     repo = IngestionRunRepository(db)
     metric_repo = SourceIngestionMetricRepository(db)
     source_repo = SourceRepository(db)
-
+    
     runs = repo.list_runs(limit=10000)
     metrics = []
-
+    
     for run in runs:
         metrics.extend(metric_repo.list_by_ingestion_run(run.id))
-
+    
     output_file = output_dir / "source_metrics.csv"
-
+    
     with open(output_file, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow([
@@ -111,11 +111,11 @@ def export_source_metrics(db: Session, output_dir: Path):
             "events_deduplicated",
             "error_message"
         ])
-
+        
         for metric in metrics:
             source = source_repo.get_by_id(metric.source_id)
             source_name = source.name if source else f"Source {metric.source_id}"
-
+            
             writer.writerow([
                 metric.id,
                 metric.ingestion_run_id,
@@ -133,7 +133,7 @@ def export_source_metrics(db: Session, output_dir: Path):
                 metric.events_deduplicated,
                 metric.error_message or ""
             ])
-
+    
     print(f"Exported {len(metrics)} source metrics to {output_file}")
     return len(metrics)
 
@@ -141,7 +141,7 @@ def export_source_metrics(db: Session, output_dir: Path):
 def export_event_metrics(db: Session, output_dir: Path):
     """
     Export event-level metrics aggregated by event.
-
+    
     Computed metrics:
     - events_per_source: how many sources reported each event
     - domains: domain distribution
@@ -149,11 +149,11 @@ def export_event_metrics(db: Session, output_dir: Path):
     """
     from app.models.event import Event
     from app.models.source import Source
-
+    
     events = db.query(Event).all()
-
+    
     output_file = output_dir / "event_metrics.csv"
-
+    
     with open(output_file, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow([
@@ -167,10 +167,10 @@ def export_event_metrics(db: Session, output_dir: Path):
             "published_at",
             "processing_status"
         ])
-
+        
         for event in events:
             sources_count = len(event.event_sources) if event.event_sources else 0
-
+            
             writer.writerow([
                 event.id,
                 event.title,
@@ -182,7 +182,7 @@ def export_event_metrics(db: Session, output_dir: Path):
                 event.published_at.isoformat() if event.published_at else "",
                 event.processing_status
             ])
-
+    
     print(f"Exported {len(events)} event metrics to {output_file}")
     return len(events)
 
@@ -191,22 +191,22 @@ def main():
     """Export all metrics to CSV."""
     output_dir = Path(__file__).parent.parent / "data" / "experiments"
     output_dir.mkdir(parents=True, exist_ok=True)
-
+    
     print(f"\nExporting ingestion metrics to {output_dir}\n")
-
+    
     db = SessionLocal()
-
+    
     try:
         runs_count = export_ingestion_runs(db, output_dir)
         metrics_count = export_source_metrics(db, output_dir)
         events_count = export_event_metrics(db, output_dir)
-
+        
         print(f"\nExport completed successfully!")
         print(f"  {runs_count} ingestion runs")
         print(f"  {metrics_count} source metrics")
         print(f"  {events_count} events")
         print(f"\nOutput directory: {output_dir}")
-
+        
     except Exception as e:
         print(f"Error exporting metrics: {e}", file=sys.stderr)
         import traceback

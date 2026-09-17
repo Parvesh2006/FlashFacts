@@ -38,6 +38,8 @@ class EventCreate(EventBase):
 
 class EventResponse(EventBase):
     id: int
+    source: str
+    url: str
     dedup_hash: str
     entities: List[EntityResponse] = Field(default_factory=list)
     source_count: int = 1

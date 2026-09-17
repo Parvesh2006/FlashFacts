@@ -1,14 +1,15 @@
 from datetime import date, datetime, timezone
 from typing import Optional, List, Tuple, Dict, Any
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from app.models.event import Event, EventSource
+from app.models.document import Document
 from app.models.entity import Entity, EventEntity
 from app.schemas.event import EventCreate, DomainStatResponse, EventResponse, EntityResponse
 from app.models.source import Source
 from app.schemas.source import SourceResponse
 from app.utils.hashing import normalize_text
-
+from datetime import timezone
 
 class EventRepository:
     def __init__(self, db: Session):
@@ -128,7 +129,58 @@ class EventRepository:
         events = query.offset(offset).limit(limit).all()
         return events, total
 
+    def search_events(
+        self,
+        query_text: str,
+        domain: Optional[str] = None,
+        event_date: Optional[date] = None,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None,
+        sort: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Tuple[List[Event], int]:
+        query = (
+            self.db.query(Event)
+            .options(
+                joinedload(Event.event_entities).joinedload(EventEntity.entity),
+                joinedload(Event.event_sources),
+            )
+        )
+        pattern = f"%{query_text.strip()}%"
+        query = query.filter(
+            or_(
+                Event.title.ilike(pattern),
+                Event.summary.ilike(pattern),
+                Event.domain.ilike(pattern),
+                Event.source_url.ilike(pattern),
+                Event.event_sources.any(
+                    EventSource.document.has(Document.content.ilike(pattern))
+                ),
+            )
+        )
+
+        if domain:
+            query = query.filter(Event.domain.ilike(domain))
+        if event_date:
+            query = query.filter(Event.event_date == event_date)
+        if start_date:
+            query = query.filter(Event.event_date >= start_date)
+        if end_date:
+            query = query.filter(Event.event_date <= end_date)
+
+        total = query.count()
+        if sort == "important":
+            query = query.order_by(Event.importance_score.desc(), Event.published_at.desc())
+        else:
+            query = query.order_by(Event.published_at.desc(), Event.event_date.desc())
+
+        return query.offset(offset).limit(limit).all(), total
+
     def to_event_response(self, event: Event) -> EventResponse:
+        published_at = event.published_at
+        if published_at is not None and published_at.tzinfo is None:
+            published_at = published_at.replace(tzinfo=timezone.utc)
         entities_list = []
         if hasattr(event, "event_entities") and event.event_entities:
             for ee in event.event_entities:
@@ -161,6 +213,11 @@ class EventRepository:
         except Exception:
             source_objs = []
 
+        primary_source = next(
+            (source for source in source_objs if source.id == event.source_id),
+            None,
+        )
+
         resp_dict = {
             "id": event.id,
             "title": event.title,
@@ -168,9 +225,11 @@ class EventRepository:
             "domain": event.domain,
             "event_type": event.event_type,
             "event_date": event.event_date,
-            "published_at": event.published_at,
+            "published_at": published_at,
             "source_id": event.source_id,
             "source_url": event.source_url,
+            "source": primary_source.name if primary_source else "",
+            "url": event.source_url,
             "confidence_score": event.confidence_score,
             "dedup_hash": event.dedup_hash,
             "why_it_matters": event.why_it_matters,

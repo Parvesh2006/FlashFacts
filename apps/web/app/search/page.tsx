@@ -19,6 +19,9 @@ function SearchContent() {
   const [allEvents, setAllEvents] = useState<Event[]>([]);
   const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [domain, setDomain] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   // Fetch initial pool of events for fallback client-side searching
   useEffect(() => {
@@ -29,17 +32,31 @@ function SearchContent() {
 
   // Perform search whenever query or event pool updates
   useEffect(() => {
-    if (!query.trim()) {
+    const hasFilters = Boolean(domain || startDate || endDate);
+    if (!query.trim() && !hasFilters) {
       setSearchResult(null);
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    searchEvents(query, allEvents)
+    const filters = {
+      domain: domain || undefined,
+      start_date: startDate || undefined,
+      end_date: endDate || undefined,
+    };
+    const resultPromise = query.trim()
+      ? searchEvents(query, allEvents, filters)
+      : getEvents({ ...filters, limit: 100 }).then((res) => ({
+          events: res.events || [],
+          query: "",
+          total: res.total || 0,
+        }));
+
+    resultPromise
       .then((res) => setSearchResult(res))
       .finally(() => setLoading(false));
-  }, [query, allEvents]);
+  }, [query, allEvents, domain, startDate, endDate]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,9 +101,40 @@ function SearchContent() {
             Search
           </button>
         </div>
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <select
+            value={domain}
+            onChange={(e) => setDomain(e.target.value)}
+            className="control-input px-3 py-2 text-sm"
+            aria-label="Filter by domain"
+          >
+            <option value="">All domains</option>
+            <option value="AI">AI</option>
+            <option value="Technology">Technology</option>
+            <option value="Science">Science</option>
+            <option value="Economy">Economy</option>
+            <option value="Sports">Sports</option>
+            <option value="Government">Government</option>
+            <option value="International">International</option>
+          </select>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="control-input px-3 py-2 text-sm"
+            aria-label="Filter from date"
+          />
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="control-input px-3 py-2 text-sm"
+            aria-label="Filter through date"
+          />
+        </div>
         <div className="mt-2 flex flex-col gap-1 meta-text sm:flex-row sm:items-center sm:justify-between">
           <span>Search Engine: Keyword Exact Match Architecture</span>
-          <span>Future Endpoint: GET /api/v1/search?q=</span>
+          <span>Historical API search enabled</span>
         </div>
       </form>
 

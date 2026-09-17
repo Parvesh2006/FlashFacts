@@ -1,9 +1,11 @@
 import logging
 import time
 from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, List, Optional, Tuple
 import feedparser
 import httpx
+from app.core.config import settings
 from dateutil import parser as date_parser
 from sqlalchemy.orm import Session
 
@@ -20,10 +22,7 @@ from app.repositories.event_repository import EventRepository
 from app.services.extraction import EventExtractorService
 from app.services.deduplication import DeduplicationService
 from app.services.ai_provider import get_ai_provider
-from app.services.ai_provider import FallbackAIProvider
-from app.schemas.enrichment import EventEnrichment
 from app.utils.hashing import compute_content_hash
-from app.core.config import settings
 
 logger = logging.getLogger("app")
 
@@ -38,7 +37,7 @@ class IngestionService:
         self.dedup = DeduplicationService(self.event_repo)
         self.ai_provider = get_ai_provider()
 
-    def parse_datetime(self, entry: Dict[str, Any]) -> Optional[datetime]:
+    def parse_datetime(self, entry: Dict[str, Any]) -> datetime:
         dt_raw = entry.get("published") or entry.get("updated") or entry.get("pubDate")
         if dt_raw:
             try:
@@ -48,62 +47,91 @@ class IngestionService:
                 return dt
             except Exception:
                 pass
-        return None
+        return datetime.now(timezone.utc)
 
     def fetch_feed(self, feed_url: str) -> Tuple[Optional[feedparser.FeedParserDict], Optional[int], Optional[str]]:
         """
         Fetch a feed URL with error handling.
-
+        Fetch a feed URL with error handling and retry mechanism.
+        
         Returns:
             Tuple of (parsed_feed, http_status, error_message)
         """
+        try:
+            with httpx.Client(timeout=10.0, follow_redirects=True) as client:
+                headers = {"User-Agent": "FlashFactsIngestionWorker/1.0"}
+                resp = client.get(feed_url, headers=headers)
         retryable_statuses = {429, 500, 502, 503, 504}
-        attempts = max(1, settings.INGESTION_MAX_RETRIES + 1)
+        max_retries = getattr(settings, "INGESTION_MAX_RETRIES", 3)
+        attempts = max(1, max_retries + 1)
         last_error = None
 
         for attempt in range(1, attempts + 1):
             try:
                 with httpx.Client(
-                    timeout=settings.INGESTION_REQUEST_TIMEOUT,
+                    timeout=getattr(settings, "INGESTION_REQUEST_TIMEOUT", 10.0),
                     follow_redirects=True,
                 ) as client:
-                    response = client.get(
-                        feed_url,
-                        headers={"User-Agent": settings.INGESTION_USER_AGENT},
-                    )
-                if response.status_code == 200:
-                    parsed = feedparser.parse(response.content)
-                    if getattr(parsed, "bozo", False) and not getattr(parsed, "entries", None):
-                        return None, response.status_code, "Malformed or empty feed"
-                    return parsed, response.status_code, None
+                    headers = {"User-Agent": getattr(settings, "INGESTION_USER_AGENT", "FlashFactsIngestionWorker/1.0")}
+                    resp = client.get(feed_url, headers=headers)
 
-                last_error = f"HTTP {response.status_code} fetching feed {feed_url}"
-                if response.status_code not in retryable_statuses:
-                    break
-            except httpx.TimeoutException as exc:
-                last_error = f"Timeout fetching feed {feed_url}: {exc}"
-            except httpx.RequestError as exc:
-                last_error = f"Request error fetching feed {feed_url}: {exc}"
-            except Exception as exc:
-                last_error = f"Error fetching feed {feed_url}: {exc}"
+                if resp.status_code == 200:
+                    return feedparser.parse(resp.text), resp.status_code, None
+                else:
+                    error_msg = f"HTTP {resp.status_code} fetching feed {feed_url}"
+                    logger.warning(error_msg)
+                    return None, resp.status_code, error_msg
+        except httpx.TimeoutException as e:
+            error_msg = f"Timeout fetching feed {feed_url}: {e}"
+            logger.error(error_msg)
+            return None, None, error_msg
+        except httpx.RequestError as e:
+            error_msg = f"Request error fetching feed {feed_url}: {e}"
+            logger.error(error_msg)
+            return None, None, error_msg
+        except Exception as e:
+            error_msg = f"Error fetching feed {feed_url}: {e}"
+            logger.error(error_msg)
+            return None, None, error_msg
+                    raw_content = getattr(resp, "content", getattr(resp, "text", ""))
+                    parsed = feedparser.parse(raw_content)
+                    if getattr(parsed, "bozo", False) and not getattr(parsed, "entries", None):
+                        return None, resp.status_code, "Malformed or empty feed"
+                    return parsed, resp.status_code, None
+
+                last_error = f"HTTP {resp.status_code} fetching feed {feed_url}"
+                if resp.status_code not in retryable_statuses:
+                    return None, resp.status_code, last_error
+
+            except httpx.TimeoutException as e:
+                last_error = f"Timeout fetching feed {feed_url}: {e}"
+                logger.error(last_error)
+            except httpx.RequestError as e:
+                last_error = f"Request error fetching feed {feed_url}: {e}"
+                logger.error(last_error)
+            except Exception as e:
+                last_error = f"Error fetching feed {feed_url}: {e}"
+                logger.error(last_error)
                 break
 
             if attempt < attempts:
-                delay = settings.INGESTION_RETRY_BACKOFF * (2 ** (attempt - 1))
-                logger.warning("Feed fetch retry: url=%s attempt=%s delay=%.2fs error=%s", feed_url, attempt, delay, last_error)
-                time.sleep(delay)
+                backoff = getattr(settings, "INGESTION_RETRY_BACKOFF", 1.0) * (2 ** (attempt - 1))
+                time.sleep(backoff)
 
-        logger.warning("Feed fetch failed: url=%s attempts=%s error=%s", feed_url, attempts, last_error)
+        logger.warning(f"Feed fetch failed: url={feed_url} attempts={attempts} error={last_error}")
         status = None
         if last_error and last_error.startswith("HTTP "):
-            status = int(last_error.split()[1])
-        return None, status, last_error or "Unknown feed fetch error"
+            try:
+                status = int(last_error.split()[1])
+            except Exception:
+                pass
+        return None, status, last_error or "Malformed or empty feed"
 
     def ingest_source(self, source: Source, ingestion_run: IngestionRun) -> SourceIngestionMetric:
         """
         Ingest a single source with comprehensive error handling and metrics tracking.
         One source failure MUST NOT stop the entire ingestion run.
-
+        
         Returns:
             SourceIngestionMetric tracking the results for this source
         """
@@ -112,19 +140,16 @@ class IngestionService:
             source_id=source.id,
             started_at=datetime.now(timezone.utc)
         )
-
+        
         start_time = time.time()
-
+        
         try:
-            source.last_attempted_at = datetime.now(timezone.utc)
-            source.last_error = None
-            self.db.commit()
             logger.info(f"Ingestion started for source: '{source.name}' (ID: {source.id})")
-
+            
             # 1. Fetch Feed
             feed, http_status, error_msg = self.fetch_feed(source.feed_url)
             metric.http_status = http_status
-
+            
             if not feed or not hasattr(feed, "entries"):
                 if error_msg:
                     metric.error_message = error_msg
@@ -132,36 +157,31 @@ class IngestionService:
                 else:
                     metric.error_message = f"Empty or invalid feed for source '{source.name}'"
                     metric.status = "invalid_feed"
-
+                
                 metric.completed_at = datetime.now(timezone.utc)
                 metric.processing_time_ms = (time.time() - start_time) * 1000
                 self.db.add(metric)
                 self.db.commit()
                 logger.warning(f"Failed to ingest source '{source.name}': {metric.error_message}")
-
+                
                 # Still update source.last_ingested_at
                 source.last_ingested_at = datetime.now(timezone.utc)
-                source.last_error = metric.error_message
                 self.db.commit()
                 return metric
 
             metric.documents_discovered = len(feed.entries)
-
+            
             # 2. Process each entry in the feed
             for entry in feed.entries:
                 try:
                     url = entry.get("link") or entry.get("id") or ""
                     title = entry.get("title") or ""
-                    source_guid = entry.get("guid") or entry.get("id") or None
-
+                    
                     # Content extraction
                     content = entry.get("summary") or ""
                     if not content and "content" in entry and len(entry.get("content", [])) > 0:
                         content = entry.get("content")[0].get("value", "")
-
-                    title = self.extractor.clean_text(title)
-                    content = self.extractor.clean_text(content)
-
+                    
                     # Validate entry
                     if not title and not content:
                         continue
@@ -170,17 +190,17 @@ class IngestionService:
                         continue
 
                     pub_dt = self.parse_datetime(entry)
+                    freshness_hours = getattr(settings, "INGESTION_FRESHNESS_HOURS", 0)
+                    if freshness_hours and freshness_hours > 0 and pub_dt:
+                        cutoff = datetime.now(timezone.utc) - timedelta(hours=freshness_hours)
+                        if pub_dt < cutoff:
+                            logger.debug(f"Skipping stale entry '{title}' published at {pub_dt}")
+                            continue
+
                     content_hash = compute_content_hash(url, title, content)
 
                     # Check for duplicate document
                     existing_doc = self.doc_repo.get_by_content_hash(content_hash)
-                    if not existing_doc:
-                        existing_doc = self.doc_repo.get_by_source_url(source.id, url)
-                    if not existing_doc and source_guid:
-                        existing_doc = self.db.query(Document).filter(
-                            Document.source_id == source.id,
-                            Document.source_guid == source_guid,
-                        ).first()
                     if existing_doc:
                         metric.documents_duplicate += 1
                         logger.debug(f"Skipping duplicate document content hash {content_hash}")
@@ -193,16 +213,10 @@ class IngestionService:
                         content=content,
                         url=url,
                         published_at=pub_dt,
-                        content_hash=content_hash,
-                        source_guid=source_guid,
+                        content_hash=content_hash
                     )
                     doc = self.doc_repo.create(doc_in)
                     metric.documents_accepted += 1
-
-                    if pub_dt is None:
-                        self.doc_repo.mark_processed(doc.id)
-                        logger.info("Stored document without event date: source=%s url=%s", source.name, url)
-                        continue
 
                     # Extract Event Candidate
                     event_candidate = self.extractor.extract_event_candidate(doc, source)
@@ -239,28 +253,11 @@ class IngestionService:
                                 "entities": []
                             }
 
-                        try:
-                            validated_enrichment = EventEnrichment.model_validate({
-                                **enrichment,
-                                "classification": enrichment.get("classification", event_candidate["domain"]),
-                            })
-                        except Exception as exc:
-                            logger.warning("AI output validation failed; using fallback: %s", exc)
-                            fallback = FallbackAIProvider().enrich_event(
-                                event_candidate["title"], doc.content,
-                                event_candidate["domain"], source.reliability_score,
-                            )
-                            validated_enrichment = EventEnrichment.model_validate({
-                                **fallback,
-                                "provider": "fallback",
-                                "used_fallback": True,
-                            })
-                        event_candidate["summary"] = validated_enrichment.summary or event_candidate["summary"]
-                        event_candidate["domain"] = validated_enrichment.classification
-                        event_candidate["event_type"] = validated_enrichment.event_type
-                        event_candidate["why_it_matters"] = validated_enrichment.why_it_matters
-                        event_candidate["importance_score"] = validated_enrichment.importance_score
-                        event_candidate["classification_confidence"] = validated_enrichment.classification_confidence
+                        event_candidate["summary"] = enrichment.get("summary", event_candidate["summary"])
+                        event_candidate["domain"] = enrichment.get("classification", event_candidate["domain"])
+                        event_candidate["why_it_matters"] = enrichment.get("why_it_matters")
+                        event_candidate["importance_score"] = enrichment.get("importance_score", 50)
+                        event_candidate["classification_confidence"] = enrichment.get("classification_confidence", 0.5)
                         event_candidate["ai_processed_at"] = datetime.now(timezone.utc)
                         event_candidate["processing_status"] = "completed"
 
@@ -268,7 +265,7 @@ class IngestionService:
                         new_event = self.event_repo.create(event_in, document_id=doc.id)
 
                         # Attach Entities if extracted
-                        entities_data = [entity.model_dump() for entity in validated_enrichment.entities]
+                        entities_data = enrichment.get("entities", [])
                         if entities_data:
                             self.event_repo.attach_entities(new_event.id, entities_data)
 
@@ -279,7 +276,6 @@ class IngestionService:
                     self.doc_repo.mark_processed(doc.id)
 
                 except Exception as e:
-                    self.db.rollback()
                     logger.error(f"Error processing entry from source '{source.name}': {e}", exc_info=True)
                     continue
 
@@ -292,7 +288,6 @@ class IngestionService:
             )
 
         except Exception as e:
-            self.db.rollback()
             logger.error(f"Unexpected error ingesting source '{source.name}': {e}", exc_info=True)
             metric.status = "failed"
             metric.error_message = str(e)
@@ -302,7 +297,7 @@ class IngestionService:
             metric.completed_at = datetime.now(timezone.utc)
             metric.processing_time_ms = (time.time() - start_time) * 1000
             self.db.add(metric)
-
+            
             # Update source.last_ingested_at
             source.last_ingested_at = datetime.now(timezone.utc)
             if metric.status == "success":
@@ -316,12 +311,12 @@ class IngestionService:
     def ingest_all_enabled_sources(self) -> Dict[str, Any]:
         """
         Ingest all enabled sources with comprehensive tracking.
-
+        
         If one source fails, continue with the next source.
         Track all metrics per source and aggregate them.
         """
         run_start_time = time.time()
-
+        
         # Create ingestion run tracker
         ingestion_run = IngestionRun(
             started_at=datetime.now(timezone.utc),
@@ -330,9 +325,9 @@ class IngestionService:
         self.db.add(ingestion_run)
         self.db.commit()
         self.db.refresh(ingestion_run)
-
+        
         logger.info(f"Ingestion run {ingestion_run.id} started")
-
+        
         # Also create a ProcessingJob for backwards compatibility
         job = ProcessingJob(job_type="ingestion", status="running", items_processed=0)
         self.db.add(job)
@@ -341,7 +336,7 @@ class IngestionService:
 
         sources = self.source_repo.list_sources(enabled_only=True)
         ingestion_run.sources_attempted = len(sources)
-
+        
         source_metrics = []
 
         for source in sources:
@@ -349,14 +344,14 @@ class IngestionService:
                 # Ingest this source (source failure will NOT stop the run)
                 metric = self.ingest_source(source, ingestion_run)
                 source_metrics.append(metric)
-
+                
                 # Update run counters
                 if metric.status == "success":
                     ingestion_run.sources_succeeded += 1
                 else:
                     ingestion_run.sources_failed += 1
                     ingestion_run.error_count += 1
-
+                    
             except Exception as e:
                 # Even if ingest_source raises, we continue
                 logger.error(f"Exception handling source '{source.name}': {e}", exc_info=True)

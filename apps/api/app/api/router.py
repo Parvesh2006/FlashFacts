@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1 import health, sources, events, domains, calendar, evaluation
+from app.api.v1 import health, sources, events, domains, calendar, evaluation, search, exams
 
 api_router = APIRouter()
 
@@ -13,5 +13,7 @@ v1_router.include_router(events.router)
 v1_router.include_router(domains.router)
 v1_router.include_router(calendar.router)
 v1_router.include_router(evaluation.router)
+v1_router.include_router(search.router)
+v1_router.include_router(exams.router)
 
 api_router.include_router(v1_router)

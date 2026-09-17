@@ -49,3 +49,35 @@ def test_list_events_and_filters(client, db_session):
     assert resp_date.status_code == 200
     assert resp_date.json()["total"] == 1
     assert resp_date.json()["events"][0]["domain"] == "Economy"
+
+    resp_search = client.get("/api/v1/search?q=research&start_date=2026-08-01&end_date=2026-08-20")
+    assert resp_search.status_code == 200
+    assert resp_search.json()["total"] == 1
+    assert resp_search.json()["events"][0]["title"] == "AI Research Conference Announced"
+
+    resp_search_domain = client.get("/api/v1/search?q=central&domain=Economy")
+    assert resp_search_domain.status_code == 200
+    assert resp_search_domain.json()["total"] == 1
+
+
+def test_search_returns_historical_events(client, db_session):
+    source = Source(name="Archive Source", url="https://archive.test", feed_url="https://archive.test/rss")
+    db_session.add(source)
+    db_session.commit()
+    archived_event = Event(
+        title="Archived climate report",
+        summary="A historical climate report remains searchable.",
+        domain="Science",
+        event_date=date(2026, 8, 1),
+        published_at=datetime(2026, 8, 1, tzinfo=timezone.utc),
+        source_id=source.id,
+        source_url="https://archive.test/climate",
+        confidence_score=1.0,
+        dedup_hash="archive-hash",
+    )
+    db_session.add(archived_event)
+    db_session.commit()
+
+    response = client.get("/api/v1/search?q=historical&date=2026-08-01")
+    assert response.status_code == 200
+    assert response.json()["total"] == 1

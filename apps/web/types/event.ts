@@ -7,6 +7,9 @@ export interface Event {
   published_at: string;
   source_id: number;
   source_url: string;
+  source: string;
+  url: string;
+  event_type?: string;
   confidence_score: number;
   dedup_hash: string;
   created_at: string;

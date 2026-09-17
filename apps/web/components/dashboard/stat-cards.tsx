@@ -51,18 +51,18 @@ export function StatCards({ totalEvents, domainCount, sourceCount }: StatCardsPr
         return (
           <div
             key={i}
-            className="editorial-card p-4 flex items-center justify-between"
+            className="editorial-card p-5 flex items-center justify-between min-h-[112px]"
           >
             <div>
               <p className="meta-text uppercase font-semibold">
                 {stat.label}
               </p>
-              <p className={`mt-1 font-bold text-[var(--text-primary)] ${stat.isText ? "text-sm" : "text-2xl font-mono"}`}>
+              <p className={`mt-1 font-bold text-[var(--text-primary)] ${stat.isText ? "text-base" : "text-3xl font-mono"}`}>
                 {stat.value}
               </p>
             </div>
-            <div className={`w-10 h-10 rounded-lg ${stat.bgColor} border ${stat.borderColor} flex items-center justify-center ${stat.color}`}>
-              <Icon className="w-5 h-5" />
+            <div className={`w-12 h-12 rounded-lg ${stat.bgColor} border ${stat.borderColor} flex items-center justify-center ${stat.color}`}>
+              <Icon className="w-6 h-6" />
             </div>
           </div>
         );

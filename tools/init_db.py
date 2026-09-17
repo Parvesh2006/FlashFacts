@@ -21,7 +21,7 @@ def init_db():
     print("Creating database schema...")
     Base.metadata.create_all(bind=engine)
     print("✓ Schema created")
-
+    
     # Seed sources
     db = SessionLocal()
     try:
@@ -29,7 +29,7 @@ def init_db():
         if existing > 0:
             print(f"✓ Database already has {existing} sources")
             return
-
+        
         print("\nSeeding default sources...")
         sources = [
             {
@@ -60,15 +60,15 @@ def init_db():
                 "enabled": True,
             },
         ]
-
+        
         for source_data in sources:
             source = Source(**source_data)
             db.add(source)
             print(f"  + {source_data['name']}")
-
+        
         db.commit()
         print("\n✓ Sources seeded successfully")
-
+        
     except Exception as e:
         print(f"Error: {e}")
         db.rollback()

@@ -12,8 +12,6 @@ import {
   GraduationCap,
   Settings,
   Zap,
-  PanelLeftClose,
-  PanelLeftOpen,
 } from "lucide-react";
 
 export interface NavItem {
@@ -91,34 +89,29 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       aria-label={collapsed ? "Collapsed sidebar" : "Expanded sidebar"}
     >
       <div className={`border-b ${collapsed ? "px-3" : "px-5"} py-6 ${collapsed ? "flex flex-col items-center gap-4" : "flex items-center justify-between gap-3"}`}>
-        <Link
-          href="/"
-          className={`flex min-w-0 items-center gap-3 group ${collapsed ? "justify-center" : ""}`}
-          title={collapsed ? "FlashFacts overview" : undefined}
-          aria-label="FlashFacts overview"
-        >
-          <div className="brand-mark flex h-10 w-10 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105">
+        <div className={`flex min-w-0 items-center gap-3 ${collapsed ? "justify-center" : ""}`}>
+          <button
+            type="button"
+            onClick={onToggle}
+            className="brand-mark flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl transition-transform duration-200 hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)]"
+            aria-label={toggleLabel}
+            aria-expanded={!collapsed}
+            title={toggleLabel}
+          >
             <Zap className="h-4 w-4 fill-current" />
-          </div>
-          <div className={`sidebar-label ${collapsed ? "sidebar-label-collapsed" : ""}`}>
-            <h1 className="flex items-center gap-1.5 text-base font-extrabold tracking-normal text-[var(--text-primary)]">
+          </button>
+          <Link
+            href="/"
+            className={`sidebar-label min-w-0 group ${collapsed ? "sidebar-label-collapsed" : ""}`}
+            aria-label="FlashFacts overview"
+          >
+            <h1 className="flex items-center gap-1.5 text-lg font-extrabold tracking-normal text-[var(--text-primary)]">
               FLASHFACTS
               <span className="soft-badge px-1.5 py-0.5 text-[10px] font-mono uppercase">v2.5</span>
             </h1>
             <p className="meta-text mt-1 uppercase">Current Affairs Intelligence</p>
-          </div>
-        </Link>
-        <button
-          type="button"
-          onClick={onToggle}
-          className="sidebar-collapse-button button-base button-ghost icon-button"
-          aria-label={toggleLabel}
-          aria-expanded={!collapsed}
-          title={toggleLabel}
-          data-collapsed={collapsed}
-        >
-          {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-        </button>
+          </Link>
+        </div>
       </div>
 
       <div className={`flex-1 space-y-7 overflow-y-auto py-6 ${collapsed ? "px-3" : "px-4"}`}>

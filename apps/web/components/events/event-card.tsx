@@ -16,12 +16,16 @@ export function EventCard({ event, compact = false }: EventCardProps) {
   return (
     <div className="editorial-card editorial-card-hover group/card p-5 flex flex-col justify-between h-full">
       <div>
-        <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="flex items-center justify-between gap-2 mb-3">
           <DomainBadge domain={event.domain || "General"} />
           <div className="flex items-center gap-1.5 meta-text">
             <Calendar className="w-3.5 h-3.5 accent-mark" />
             <span>{formatDate(event.event_date)}</span>
           </div>
+
+        <p className="meta-text mb-2 truncate" title={event.source || undefined}>
+          {event.source || "Unknown source"}
+        </p>
         </div>
 
         <Link href={`/event/${event.id}`} className="group">

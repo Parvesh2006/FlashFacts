@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import List, Union
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator
@@ -32,6 +33,7 @@ class Settings(BaseSettings):
     INGESTION_MAX_RETRIES: int = 3
     INGESTION_RETRY_BACKOFF: float = 1.0
     INGESTION_USER_AGENT: str = "FlashFacts/0.1 (+https://example.com)"
+    INGESTION_FRESHNESS_HOURS: int = 168
 
     # CORS
     CORS_ORIGINS: Union[str, List[str]] = ["*"]
@@ -48,7 +50,7 @@ class Settings(BaseSettings):
         return v
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=Path(__file__).resolve().parents[4] / ".env",
         env_file_encoding="utf-8",
         extra="ignore"
     )

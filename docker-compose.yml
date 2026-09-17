@@ -38,6 +38,9 @@ services:
       REDIS_URL: redis://redis:6379/0
       APP_ENV: production
       CORS_ORIGINS: '["*"]'
+      INGESTION_ENABLED: "true"
+      INGESTION_INTERVAL_MINUTES: "30"
+      INGESTION_FRESHNESS_HOURS: "72"
     ports:
       - "8000:8000"
     depends_on:

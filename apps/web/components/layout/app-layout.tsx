@@ -27,7 +27,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           isMobileMenuOpen={isMobileMenuOpen}
         />
-        <main key={pathname} className="page-enter flex-1 p-4 md:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main key={pathname} className="page-enter flex-1 w-full p-4 md:p-6 lg:p-8 xl:p-10">
           {children}
         </main>
       </div>

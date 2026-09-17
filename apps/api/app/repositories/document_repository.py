@@ -24,6 +24,13 @@ class DocumentRepository:
             .first()
         )
 
+    def get_by_source_guid(self, source_id: int, source_guid: str) -> Optional[Document]:
+        return (
+            self.db.query(Document)
+            .filter(Document.source_id == source_id, Document.source_guid == source_guid)
+            .first()
+        )
+
     def create(self, doc_in: DocumentCreate) -> Document:
         doc = Document(**doc_in.model_dump())
         self.db.add(doc)

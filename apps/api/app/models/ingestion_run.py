@@ -11,28 +11,28 @@ class IngestionRun(Base):
     started_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
     completed_at = Column(DateTime(timezone=True), nullable=True)
     status = Column(String(50), nullable=False, default="running", index=True)
-
+    
     # Aggregate metrics
     sources_attempted = Column(Integer, nullable=False, default=0)
     sources_succeeded = Column(Integer, nullable=False, default=0)
     sources_failed = Column(Integer, nullable=False, default=0)
-
+    
     documents_discovered = Column(Integer, nullable=False, default=0)
     documents_accepted = Column(Integer, nullable=False, default=0)
     documents_duplicate = Column(Integer, nullable=False, default=0)
-
+    
     events_created = Column(Integer, nullable=False, default=0)
     events_deduplicated = Column(Integer, nullable=False, default=0)
-
+    
     processing_time_ms = Column(Float, nullable=False, default=0.0)
     error_count = Column(Integer, nullable=False, default=0)
-
+    
     created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     # Relationships
     source_metrics = relationship("SourceIngestionMetric", back_populates="ingestion_run", cascade="all, delete-orphan")
-
+    
     def __init__(self, **kwargs):
         # Ensure all integer fields have default values
         if 'sources_attempted' not in kwargs:

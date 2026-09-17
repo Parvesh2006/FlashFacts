@@ -72,18 +72,18 @@ export default function DashboardPage() {
           <section className="space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
               <div>
-                <h2 className="headline text-2xl flex items-center gap-2">
-                  <Layers className="w-5 h-5 accent-mark" />
+                <h2 className="headline text-3xl flex items-center gap-2">
+                  <Layers className="w-6 h-6 accent-mark" />
                   <span>Domain Intelligence Breakdown</span>
                 </h2>
-                <p className="body-copy text-sm">
+                <p className="body-copy text-base">
                   Select a category to filter current affairs events
                 </p>
               </div>
 
               <Link
                 href="/explore"
-                className="text-xs font-mono text-[var(--brand-primary)] flex items-center gap-1 font-semibold"
+                className="text-sm font-mono text-[var(--brand-primary)] flex items-center gap-1 font-semibold"
               >
                 <span>View All</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -97,11 +97,11 @@ export default function DashboardPage() {
           <section className="space-y-4 pt-2">
             <div className="flex items-center justify-between border-b pb-3">
               <div>
-                <h2 className="headline text-2xl flex items-center gap-2">
-                  <Compass className="w-5 h-5 accent-mark" />
+                <h2 className="headline text-3xl flex items-center gap-2">
+                  <Compass className="w-6 h-6 accent-mark" />
                   <span>Latest Current Affairs</span>
                 </h2>
-                <p className="body-copy text-sm">
+                <p className="body-copy text-base">
                   Recently indexed current affairs events across all permitted feeds
                 </p>
               </div>
@@ -109,15 +109,15 @@ export default function DashboardPage() {
               <div className="flex items-center gap-3">
                 <button
                   onClick={fetchDashboardData}
-                  className="control p-2 text-[var(--text-secondary)] hover:text-[var(--brand-primary)]"
+                  className="control p-2.5 text-[var(--text-secondary)] hover:text-[var(--brand-primary)]"
                   title="Refresh Latest Events"
                 >
-                  <RefreshCw className="w-3.5 h-3.5" />
+                  <RefreshCw className="w-4 h-4" />
                 </button>
 
                 <Link
                   href="/explore"
-                  className="text-xs font-mono text-[var(--brand-primary)] flex items-center gap-1 font-semibold"
+                  className="text-sm font-mono text-[var(--brand-primary)] flex items-center gap-1 font-semibold"
                 >
                   <span>Explore Explorer</span>
                   <ArrowRight className="w-3.5 h-3.5" />

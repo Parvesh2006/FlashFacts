@@ -1,6 +1,7 @@
 from unittest.mock import patch, MagicMock
 from datetime import datetime, timezone
 from app.models.source import Source
+from app.models.event import Event
 from app.models.ingestion_run import IngestionRun
 from app.services.ingestion import IngestionService
 
@@ -35,11 +36,11 @@ def test_ingestion_service_with_mock_feed(db_session):
     mock_feed.entries = mock_entries
 
     service = IngestionService(db_session)
-
+    
     # Patch fetch_feed to return the parsed tuple format
     def mock_fetch(url):
         return mock_feed, 200, None
-
+    
     with patch.object(service, "fetch_feed", side_effect=mock_fetch):
         metric = service.ingest_source(source, ingestion_run)
 
@@ -48,11 +49,18 @@ def test_ingestion_service_with_mock_feed(db_session):
         assert metric.events_created == 1
         assert metric.status == "success"
 
+        event = db_session.query(Event).one()
+        response = service.event_repo.to_event_response(event)
+        assert response.source == "Mock Feed Source"
+        assert response.url == "https://mockfeed.com/article-1"
+        assert response.source_url == "https://mockfeed.com/article-1"
+        assert response.published_at == datetime(2026, 8, 18, 12, tzinfo=timezone.utc)
+
         # Run ingestion a SECOND time with identical data -> document duplicate skipped!
         ingestion_run2 = IngestionRun(started_at=datetime.now(timezone.utc), status="running")
         db_session.add(ingestion_run2)
         db_session.commit()
-
+        
         metric_repeat = service.ingest_source(source, ingestion_run2)
         assert metric_repeat.documents_discovered == 1
         assert metric_repeat.documents_accepted == 0

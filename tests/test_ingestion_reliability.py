@@ -5,6 +5,7 @@ import httpx
 from app.models.ingestion_run import IngestionRun
 from app.models.source import Source
 from app.services.ingestion import IngestionService
+from app.core.config import settings
 
 
 def _source(db_session, name, feed_url):
@@ -105,3 +106,22 @@ def test_source_failure_does_not_stop_other_sources(db_session):
     assert result["sources_failed"] == 1
     assert result["documents_ingested"] == 1
     assert healthy.last_error is None
+
+
+def test_stale_entries_are_skipped_when_freshness_is_configured(db_session, monkeypatch):
+    source = _source(db_session, "Freshness", "https://freshness.test/feed")
+    feed = MagicMock()
+    feed.entries = [{
+        "title": "Old science story",
+        "summary": "This entry is outside the configured window.",
+        "link": "https://freshness.test/old",
+        "published": "Tue, 18 Aug 2026 12:00:00 GMT",
+    }]
+    service = IngestionService(db_session)
+    monkeypatch.setattr(settings, "INGESTION_FRESHNESS_HOURS", 1)
+
+    with patch.object(service, "fetch_feed", return_value=(feed, 200, None)):
+        metric = service.ingest_source(source, _run(db_session))
+
+    assert metric.documents_discovered == 1
+    assert metric.documents_accepted == 0

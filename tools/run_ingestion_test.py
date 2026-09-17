@@ -33,30 +33,30 @@ def main():
     print("\n" + "=" * 70)
     print("FLASHFACTS END-TO-END INGESTION TEST")
     print("=" * 70)
-
+    
     db = SessionLocal()
-
+    
     try:
         # Check enabled sources
         sources = db.query(Source).filter(Source.enabled == True).all()
         print(f"\nFound {len(sources)} enabled sources:")
         for source in sources:
             print(f"  - {source.name}")
-
+        
         if not sources:
             print("\nNo enabled sources found. Please enable sources first.")
             return
-
+        
         # Run ingestion
         print("\n" + "-" * 70)
         print("Starting ingestion run...")
         print("-" * 70)
-
+        
         start_time = time.time()
         ingestion_service = IngestionService(db)
         result = ingestion_service.ingest_all_enabled_sources()
         elapsed = time.time() - start_time
-
+        
         print(f"\nIngestion completed in {elapsed:.2f} seconds")
         print(f"\nResults:")
         print(f"  Run ID: {result['ingestion_run_id']}")
@@ -71,20 +71,20 @@ def main():
         print(f"  Events deduplicated: {result['events_deduplicated']}")
         print(f"  Processing time: {result['processing_time_ms']:.2f}ms")
         print(f"  Errors: {result['error_count']}")
-
+        
         # Save results to JSON
         output_file = Path(__file__).parent / "data" / "experiments" / "ingestion_run_results.json"
         output_file.parent.mkdir(parents=True, exist_ok=True)
-
+        
         with open(output_file, "w") as f:
             # Make it JSON serializable
             result['completed_at'] = datetime.now().isoformat()
             json.dump(result, f, indent=2)
-
+        
         print(f"\nResults saved to {output_file}")
-
+        
         return result
-
+        
     except Exception as e:
         print(f"\nError during ingestion: {e}")
         import traceback

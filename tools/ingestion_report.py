@@ -46,14 +46,14 @@ def format_timestamp(dt) -> str:
 
 def generate_report(run_id: int = None, latest: bool = False, db: Session = None):
     """Generate and display ingestion report."""
-
+    
     if db is None:
         db = SessionLocal()
-
+    
     run_repo = IngestionRunRepository(db)
     metric_repo = SourceIngestionMetricRepository(db)
     source_repo = SourceRepository(db)
-
+    
     # Get the ingestion run
     if latest:
         ingestion_run = run_repo.get_latest_run()
@@ -68,71 +68,71 @@ def generate_report(run_id: int = None, latest: bool = False, db: Session = None
     else:
         print("Please specify --run-id or --latest")
         return
-
+    
     # Get source metrics
     source_metrics = metric_repo.list_by_ingestion_run(ingestion_run.id)
-
+    
     # Generate report
     print("\n" + "=" * 70)
     print("FLASHFACTS INGESTION REPORT")
     print("=" * 70)
-
+    
     print(f"\nRun ID: {ingestion_run.id}")
     print(f"Status: {ingestion_run.status.upper()}")
     print(f"Started: {format_timestamp(ingestion_run.started_at)}")
     print(f"Completed: {format_timestamp(ingestion_run.completed_at)}")
     print(f"Duration: {format_duration_ms(ingestion_run.processing_time_ms)}")
-
+    
     print("\n" + "-" * 70)
     print("AGGREGATE STATISTICS")
     print("-" * 70)
-
+    
     print(f"\nSources:")
     print(f"  Attempted: {ingestion_run.sources_attempted}")
     print(f"  Succeeded: {ingestion_run.sources_succeeded}")
     print(f"  Failed: {ingestion_run.sources_failed}")
-
+    
     print(f"\nDocuments:")
     print(f"  Discovered: {ingestion_run.documents_discovered}")
     print(f"  Accepted: {ingestion_run.documents_accepted}")
     print(f"  Duplicates: {ingestion_run.documents_duplicate}")
-
+    
     print(f"\nEvents:")
     print(f"  Created: {ingestion_run.events_created}")
     print(f"  Deduplicated: {ingestion_run.events_deduplicated}")
-
+    
     print(f"\nErrors: {ingestion_run.error_count}")
-
+    
     if source_metrics:
         print("\n" + "-" * 70)
         print("SOURCE BREAKDOWN")
         print("-" * 70)
-
+        
         for metric in source_metrics:
             source = source_repo.get_by_id(metric.source_id)
             source_name = source.name if source else f"Source {metric.source_id}"
-
+            
             print(f"\n{source_name}")
             print(f"  Status: {metric.status}")
             print(f"  Started: {format_timestamp(metric.started_at)}")
             print(f"  Completed: {format_timestamp(metric.completed_at)}")
             print(f"  Duration: {format_duration_ms(metric.processing_time_ms)}")
-
+            
             if metric.http_status:
                 print(f"  HTTP Status: {metric.http_status}")
-
+            
             print(f"  Documents:")
             print(f"    Discovered: {metric.documents_discovered}")
             print(f"    Accepted: {metric.documents_accepted}")
             print(f"    Duplicates: {metric.documents_duplicate}")
-
+            
             print(f"  Events:")
             print(f"    Created: {metric.events_created}")
             print(f"    Deduplicated: {metric.events_deduplicated}")
-
+            
             if metric.error_message:
                 print(f"  Error: {metric.error_message}")
-
+    
     print("\n" + "=" * 70)
     print()
 
@@ -152,13 +152,13 @@ def main():
         action="store_true",
         help="Report on the most recent ingestion run"
     )
-
+    
     args = parser.parse_args()
-
+    
     if not args.run_id and not args.latest:
         parser.print_help()
         sys.exit(1)
-
+    
     try:
         generate_report(run_id=args.run_id, latest=args.latest)
     except Exception as e:

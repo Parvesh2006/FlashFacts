@@ -7,7 +7,17 @@ export interface SearchResult {
   total: number;
 }
 
-export async function searchEvents(query: string, loadedEvents?: Event[]): Promise<SearchResult> {
+export interface SearchFilters {
+  domain?: string;
+  start_date?: string;
+  end_date?: string;
+}
+
+export async function searchEvents(
+  query: string,
+  loadedEvents?: Event[],
+  filters?: SearchFilters,
+): Promise<SearchResult> {
   const cleanQuery = query.trim().toLowerCase();
   if (!cleanQuery) {
     return { events: [], query, total: 0 };
@@ -15,7 +25,7 @@ export async function searchEvents(query: string, loadedEvents?: Event[]): Promi
 
   // Attempt backend endpoint if available, fallback to client-side filtering
   try {
-    const data = await api.get<{ events: Event[]; total: number }>("/api/v1/search", { q: query });
+    const data = await api.get<{ events: Event[]; total: number }>("/api/v1/search", { q: query, ...filters });
     return {
       events: data.events || [],
       query,

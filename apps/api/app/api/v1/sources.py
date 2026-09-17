@@ -34,6 +34,12 @@ def create_source(
     return repo.create(source_in)
 
 
+@router.post("/ingest")
+def trigger_ingestion(db: Session = Depends(get_db)):
+    service = IngestionService(db)
+    return service.ingest_all_enabled_sources()
+
+
 @router.get("/{source_id}", response_model=SourceResponse)
 def get_source(source_id: int, db: Session = Depends(get_db)):
     repo = SourceRepository(db)
@@ -41,10 +47,3 @@ def get_source(source_id: int, db: Session = Depends(get_db)):
     if not source:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source not found")
     return source
-
-
-@router.post("/ingest")
-def trigger_ingestion(db: Session = Depends(get_db)):
-    service = IngestionService(db)
-    result = service.ingest_all_enabled_sources()
-    return result

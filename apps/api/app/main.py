@@ -27,47 +27,47 @@ def seed_default_sources(db: Session = None):
             # Curated MVP permitted sources covering key domains
             default_sources = [
                 {
-                    "name": "TechCrunch",
-                    "url": "https://techcrunch.com",
-                    "feed_url": "https://techcrunch.com/feed/",
+                    "name": "BBC Technology",
+                    "url": "https://www.bbc.com/news/technology",
+                    "feed_url": "https://feeds.bbci.co.uk/news/technology/rss.xml",
                     "source_type": "rss",
                     "domain": "Technology",
-                    "reliability_score": 0.95,
+                    "reliability_score": 0.98,
                     "enabled": True,
                 },
                 {
-                    "name": "MIT Technology Review",
-                    "url": "https://www.technologyreview.com",
-                    "feed_url": "https://www.technologyreview.com/feed/",
+                    "name": "BBC Business",
+                    "url": "https://www.bbc.com/news/business",
+                    "feed_url": "https://feeds.bbci.co.uk/news/business/rss.xml",
                     "source_type": "rss",
-                    "domain": "AI",
-                    "reliability_score": 0.97,
+                    "domain": "Economy",
+                    "reliability_score": 0.98,
                     "enabled": True,
                 },
                 {
                     "name": "BBC World News",
                     "url": "https://www.bbc.com/news",
-                    "feed_url": "http://feeds.bbci.co.uk/news/world/rss.xml",
+                    "feed_url": "https://feeds.bbci.co.uk/news/world/rss.xml",
                     "source_type": "rss",
                     "domain": "International",
                     "reliability_score": 0.98,
                     "enabled": True,
                 },
                 {
-                    "name": "NASA News Releases",
-                    "url": "https://www.nasa.gov",
-                    "feed_url": "https://www.nasa.gov/news-release/feed/",
+                    "name": "BBC India",
+                    "url": "https://www.bbc.com/news/world/asia/india",
+                    "feed_url": "https://feeds.bbci.co.uk/news/world/asia/india/rss.xml",
                     "source_type": "rss",
-                    "domain": "Science",
-                    "reliability_score": 0.99,
+                    "domain": "International",
+                    "reliability_score": 0.98,
                     "enabled": True,
                 },
                 {
-                    "name": "The White House",
-                    "url": "https://www.whitehouse.gov",
-                    "feed_url": "https://www.whitehouse.gov/feed/",
+                    "name": "NASA Breaking News",
+                    "url": "https://www.nasa.gov/news/",
+                    "feed_url": "https://www.nasa.gov/rss/dyn/breaking_news.rss",
                     "source_type": "rss",
-                    "domain": "Government",
+                    "domain": "Science",
                     "reliability_score": 0.99,
                     "enabled": True,
                 },
@@ -81,48 +81,12 @@ def seed_default_sources(db: Session = None):
                     "enabled": True,
                 },
                 {
-                    "name": "UNESCO",
-                    "url": "https://en.unesco.org",
-                    "feed_url": "https://en.unesco.org/feed/rss2",
-                    "source_type": "rss",
-                    "domain": "Education",
-                    "reliability_score": 0.97,
-                    "enabled": True,
-                },
-                {
-                    "name": "World Bank",
-                    "url": "https://www.worldbank.org",
-                    "feed_url": "https://www.worldbank.org/en/news/rss",
-                    "source_type": "rss",
-                    "domain": "Economy",
-                    "reliability_score": 0.98,
-                    "enabled": True,
-                },
-                {
-                    "name": "Reuters World News",
-                    "url": "https://www.reuters.com",
-                    "feed_url": "http://feeds.reuters.com/Reuters/worldNews",
-                    "source_type": "rss",
-                    "domain": "International",
-                    "reliability_score": 0.99,
-                    "enabled": True,
-                },
-                {
-                    "name": "NATO",
-                    "url": "https://www.nato.int",
-                    "feed_url": "https://www.nato.int/nato_static_fl2014/assets/rss/rss.xml",
-                    "source_type": "rss",
-                    "domain": "Defence",
-                    "reliability_score": 0.98,
-                    "enabled": True,
-                },
-                {
                     "name": "BBC Sport",
-                    "url": "https://www.bbc.co.uk/sport",
-                    "feed_url": "http://feeds.bbci.co.uk/sport/rss.xml?edition=uk",
+                    "url": "https://www.bbc.com/sport",
+                    "feed_url": "https://feeds.bbci.co.uk/sport/rss.xml",
                     "source_type": "rss",
                     "domain": "Sports",
-                    "reliability_score": 0.95,
+                    "reliability_score": 0.98,
                     "enabled": True,
                 }
             ]
@@ -148,7 +112,7 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Database initialization during lifespan skipped or failed: {e}")
     scheduler_task = None
     stop_event = asyncio.Event()
-    if settings.INGESTION_ENABLED:
+    if settings.INGESTION_ENABLED and settings.APP_ENV != "testing":
         scheduler_task = asyncio.create_task(ingestion_scheduler(stop_event))
     yield
     if scheduler_task:

@@ -38,10 +38,10 @@ def test_identical_document_ingestion_twice(db_session):
     mock_feed.entries = mock_entries
 
     service = IngestionService(db_session)
-
+    
     def mock_fetch(url):
         return mock_feed, 200, None
-
+    
     with patch.object(service, "fetch_feed", side_effect=mock_fetch):
         metric1 = service.ingest_source(source, ingestion_run1)
 
@@ -99,10 +99,10 @@ def test_same_event_from_multiple_sources_merges_and_preserves_attribution(db_se
 
     # Ingest with Source One
     service1 = IngestionService(db_session)
-
+    
     def mock_fetch1(url):
         return mock_feed, 200, None
-
+    
     with patch.object(service1, "fetch_feed", side_effect=mock_fetch1):
         res1 = service1.ingest_source(s1, ingestion_run1)
         assert res1.events_created == 1
@@ -120,10 +120,10 @@ def test_same_event_from_multiple_sources_merges_and_preserves_attribution(db_se
     mock_feed_2.entries = mock_entries_2
 
     service2 = IngestionService(db_session)
-
+    
     def mock_fetch2(url):
         return mock_feed_2, 200, None
-
+    
     with patch.object(service2, "fetch_feed", side_effect=mock_fetch2):
         res2 = service2.ingest_source(s2, ingestion_run2)
         # Should detect same event and link document to existing event
@@ -181,10 +181,10 @@ def test_entity_persistence_and_attachment(db_session):
             }
 
     service = IngestionService(db_session)
-
+    
     def mock_fetch(url):
         return mock_feed, 200, None
-
+    
     with patch.object(service, "fetch_feed", side_effect=mock_fetch):
         # inject mock AI provider
         service.ai_provider = MockAI()
@@ -221,10 +221,10 @@ def test_feed_failure_is_handled_and_reported(db_session):
     db_session.commit()
 
     service = IngestionService(db_session)
-
+    
     def mock_fetch_error(url):
         return None, None, "Connection failed"
-
+    
     with patch.object(service, "fetch_feed", side_effect=mock_fetch_error):
         res = service.ingest_source(s, ingestion_run)
         # Should not crash and should handle the error

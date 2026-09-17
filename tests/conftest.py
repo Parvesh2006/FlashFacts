@@ -3,6 +3,8 @@ import sys
 
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 os.environ["APP_ENV"] = "testing"
+os.environ["INGESTION_FRESHNESS_HOURS"] = "0"
+os.environ["INGESTION_ENABLED"] = "false"
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "apps", "api")))
 

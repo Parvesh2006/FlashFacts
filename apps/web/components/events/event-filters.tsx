@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Filter, RotateCcw, Calendar, Tag } from "lucide-react";
 import { DomainStat } from "@/types/domain";
 
@@ -28,7 +28,39 @@ export function EventFilters({
   onDateRangeChange,
   onReset,
 }: EventFiltersProps) {
-  const hasActiveFilters = Boolean(selectedDomain || selectedDate || startDate || endDate);
+  const [localStartDate, setLocalStartDate] = useState(startDate || "");
+  const [localEndDate, setLocalEndDate] = useState(endDate || "");
+
+  useEffect(() => {
+    setLocalStartDate(startDate || "");
+  }, [startDate]);
+
+  useEffect(() => {
+    setLocalEndDate(endDate || "");
+  }, [endDate]);
+
+  const hasActiveFilters = Boolean(
+    selectedDomain || selectedDate || startDate || endDate
+  );
+
+  const isCompleteDate = (value: string) =>
+    /^\d{4}-\d{2}-\d{2}$/.test(value);
+
+  const handleStartDateChange = (value: string) => {
+    setLocalStartDate(value);
+
+    if (value === "" || isCompleteDate(value)) {
+      onDateRangeChange(value || undefined, localEndDate || undefined);
+    }
+  };
+
+  const handleEndDateChange = (value: string) => {
+    setLocalEndDate(value);
+
+    if (value === "" || isCompleteDate(value)) {
+      onDateRangeChange(localStartDate || undefined, value || undefined);
+    }
+  };
 
   return (
     <div className="editorial-card p-4 space-y-4 mb-6">
@@ -55,12 +87,14 @@ export function EventFilters({
             <Tag className="w-3 h-3 accent-mark" />
             <span>Domain Category</span>
           </label>
+
           <select
             value={selectedDomain || ""}
             onChange={(e) => onDomainChange(e.target.value || undefined)}
             className="control-input w-full px-3 py-2 focus:outline-none focus:border-[var(--brand-primary)]"
           >
             <option value="">All Domains</option>
+
             {domains.map((d) => (
               <option key={d.domain} value={d.domain}>
                 {d.domain} ({d.count})
@@ -74,6 +108,7 @@ export function EventFilters({
             <Calendar className="w-3 h-3 accent-mark" />
             <span>Exact Event Date</span>
           </label>
+
           <input
             type="date"
             value={selectedDate || ""}
@@ -83,21 +118,27 @@ export function EventFilters({
         </div>
 
         <div>
-          <label className="block meta-text mb-1">From Date</label>
+          <label className="block meta-text mb-1">
+            From Date
+          </label>
+
           <input
             type="date"
-            value={startDate || ""}
-            onChange={(e) => onDateRangeChange(e.target.value || undefined, endDate)}
+            value={localStartDate}
+            onChange={(e) => handleStartDateChange(e.target.value)}
             className="control-input w-full px-3 py-1.5 focus:outline-none focus:border-[var(--brand-primary)]"
           />
         </div>
 
         <div>
-          <label className="block meta-text mb-1">To Date</label>
+          <label className="block meta-text mb-1">
+            To Date
+          </label>
+
           <input
             type="date"
-            value={endDate || ""}
-            onChange={(e) => onDateRangeChange(startDate, e.target.value || undefined)}
+            value={localEndDate}
+            onChange={(e) => handleEndDateChange(e.target.value)}
             className="control-input w-full px-3 py-1.5 focus:outline-none focus:border-[var(--brand-primary)]"
           />
         </div>

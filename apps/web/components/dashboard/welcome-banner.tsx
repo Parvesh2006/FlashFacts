@@ -13,8 +13,8 @@ export function WelcomeBanner() {
     <div className="editorial-card p-6 md:p-8 border-l-4 border-l-[var(--brand-primary)]">
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-mono bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] border border-[var(--brand-primary-border)]">
-            <Sparkles className="w-3.5 h-3.5" />
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-mono bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] border border-[var(--brand-primary-border)]">
+            <Sparkles className="w-4 h-4" />
             <span>REAL-TIME CURRENT AFFAIRS INTELLIGENCE</span>
           </span>
           <span className="flex items-center gap-1.5 meta-text">
@@ -27,7 +27,7 @@ export function WelcomeBanner() {
           Today&apos;s Current Affairs Overview
         </h1>
 
-        <p className="body-copy text-sm max-w-2xl">
+          <p className="body-copy text-base max-w-3xl">
           FlashFacts ingests, deduplicates, and categorizes breaking current affairs from permitted news feeds date-by-date across 13 major domains.
         </p>
       </div>
