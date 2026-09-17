@@ -65,6 +65,7 @@ class IngestionService:
         max_retries = getattr(settings, "INGESTION_MAX_RETRIES", 3)
         attempts = max(1, max_retries + 1)
         last_error = None
+        last_status = None
 
         for attempt in range(1, attempts + 1):
             try:
@@ -74,6 +75,7 @@ class IngestionService:
                 ) as client:
                     headers = {"User-Agent": getattr(settings, "INGESTION_USER_AGENT", "FlashFactsIngestionWorker/1.0")}
                     resp = client.get(feed_url, headers=headers)
+                    last_status = resp.status_code
 
                 if resp.status_code == 200:
                     return feedparser.parse(resp.text), resp.status_code, None
@@ -117,6 +119,9 @@ class IngestionService:
             if attempt < attempts:
                 backoff = getattr(settings, "INGESTION_RETRY_BACKOFF", 1.0) * (2 ** (attempt - 1))
                 time.sleep(backoff)
+
+        return None, last_status, last_error
+
 
         logger.warning(f"Feed fetch failed: url={feed_url} attempts={attempts} error={last_error}")
         status = None

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Calendar,
   Clock,
@@ -9,12 +10,20 @@ import {
   Database,
   Share2,
   Sparkles,
+  GraduationCap,
+  BookOpen,
+  CheckCircle2,
+  XCircle,
+  Tag,
 } from "lucide-react";
 import { Event } from "@/types/event";
+import { Event, EventExamIntelligence, MCQ, MCQResponse } from "@/types/event";
+import type { Event, EventExamIntelligence, MCQ, MCQResponse } from "@/types/event";
 import { DomainBadge } from "@/components/common/badge";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { EventCard } from "./event-card";
 import { BackButton } from "@/components/navigation/back-button";
+import { fetchEventExamRelevance, fetchEventMCQ } from "@/services/exams";
 
 interface EventDetailViewProps {
   event: Event;
@@ -23,6 +32,31 @@ interface EventDetailViewProps {
 
 export function EventDetailView({ event, relatedEvents = [] }: EventDetailViewProps) {
   const confidencePercent = Math.round((event.confidence_score || 1.0) * 100);
+
+  const [examData, setExamData] = useState<EventExamIntelligence | null>(null);
+  const [examLoading, setExamLoading] = useState(true);
+  const [mcqData, setMcqData] = useState<MCQResponse | null>(null);
+  const [mcqLoading, setMcqLoading] = useState(false);
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
+  const [revealedAnswers, setRevealedAnswers] = useState<Record<number, boolean>>({});
+
+  useEffect(() => {
+    setExamLoading(true);
+    fetchEventExamRelevance(event.id)
+      .then(setExamData)
+      .catch(() => setExamData(null))
+      .finally(() => setExamLoading(false));
+  }, [event.id]);
+
+  const loadMCQs = () => {
+    setMcqLoading(true);
+    setSelectedAnswers({});
+    setRevealedAnswers({});
+    fetchEventMCQ(event.id)
+      .then(setMcqData)
+      .catch(() => setMcqData(null))
+      .finally(() => setMcqLoading(false));
+  };
 
   const handleShare = () => {
     if (navigator.share) {
@@ -37,6 +71,15 @@ export function EventDetailView({ event, relatedEvents = [] }: EventDetailViewPr
     }
   };
 
+  const selectAnswer = (qIdx: number, letter: string) => {
+    if (revealedAnswers[qIdx]) return;
+    setSelectedAnswers((prev) => ({ ...prev, [qIdx]: letter }));
+  };
+
+  const revealAnswer = (qIdx: number) => {
+    setRevealedAnswers((prev) => ({ ...prev, [qIdx]: true }));
+  };
+
   return (
     <div className="space-y-8 max-w-5xl mx-auto">
       <div>
@@ -47,10 +90,24 @@ export function EventDetailView({ event, relatedEvents = [] }: EventDetailViewPr
         <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4">
           <div className="flex flex-wrap items-center gap-3">
             <DomainBadge domain={event.domain || "General"} className="text-xs py-1 px-3" />
+            {event.event_type && (
+              <span className="soft-badge text-xs px-2.5 py-1 rounded-md flex items-center gap-1">
+                <Tag className="w-3 h-3" />
+                {event.event_type}
+              </span>
+            )}
             <span className="status-success flex items-center gap-1 text-xs font-mono px-2.5 py-1 rounded-md">
               <ShieldCheck className="w-3.5 h-3.5" />
               <span>{confidencePercent}% Verification Confidence</span>
+              <span>{confidencePercent}% Confidence</span>
             </span>
+            {event.processing_status && (
+              <span className={`text-xs font-mono px-2.5 py-1 rounded-md ${
+                event.processing_status === "completed" ? "status-success" : "status-warning"
+              }`}>
+                {event.processing_status === "completed" ? "AI Enriched" : event.processing_status}
+              </span>
+            )}
           </div>
 
           <button
@@ -87,6 +144,7 @@ export function EventDetailView({ event, relatedEvents = [] }: EventDetailViewPr
 
         <div className="space-y-2">
           <h2 className="eyebrow">Executive Intelligence Summary</h2>
+          <h2 className="eyebrow">Intelligence Summary</h2>
           <p className="body-copy text-base md:text-lg bg-[var(--surface-muted)] border p-5 rounded-lg">
             {event.summary}
           </p>
@@ -202,12 +260,119 @@ export function EventDetailView({ event, relatedEvents = [] }: EventDetailViewPr
                   <span>Record Updated:</span>{" "}
                   <span className="text-[var(--text-primary)]">{formatDateTime(event.updated_at)}</span>
                 </div>
+                {event.ai_processed_at && (
+                  <div>
+                    <span>AI Processed:</span>{" "}
+                    <span className="text-[var(--text-primary)]">{formatDateTime(event.ai_processed_at)}</span>
+                  </div>
+                )}
               </div>
             </div>
           </details>
         </div>
       </article>
 
+      {/* Exam Relevance Section */}
+      <section className="editorial-card p-6 space-y-4">
+        <div className="flex items-center gap-2 border-b pb-3">
+          <GraduationCap className="w-5 h-5 accent-mark" />
+          <h2 className="headline text-xl">Competitive Exam Relevance</h2>
+        </div>
+
+        {examLoading ? (
+          <div className="text-sm meta-text py-4">Analyzing exam relevance...</div>
+        ) : examData && examData.relevant_exams.length > 0 ? (
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {examData.relevant_exams.map((rel) => (
+                <div
+                  key={rel.exam_id}
+                  className="editorial-panel p-3 flex-1 min-w-[180px]"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-mono text-sm font-bold text-[var(--text-primary)]">
+                      {rel.exam_code}
+                    </span>
+                    <span className="text-xs font-mono text-[var(--brand-primary)]">
+                      {rel.relevance_score}%
+                    </span>
+                  </div>
+                  <div className="text-xs text-[var(--text-secondary)]">{rel.section}</div>
+                  {rel.reasons.length > 0 && (
+                    <div className="text-[11px] text-[var(--text-muted)] mt-1">
+                      {rel.reasons.slice(0, 2).join(" · ")}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {examData.key_points.length > 0 && (
+              <div>
+                <h3 className="eyebrow text-xs mb-2">Key Points for Exams</h3>
+                <ul className="list-disc ml-4 space-y-1">
+                  {examData.key_points.map((point, i) => (
+                    <li key={i} className="body-copy text-sm">{point}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="meta-text text-sm py-2">No strong exam relevance detected for this event.</p>
+        )}
+      </section>
+
+      {/* MCQ Practice Section */}
+      <section className="editorial-card p-6 space-y-4">
+        <div className="flex items-center justify-between border-b pb-3">
+          <div className="flex items-center gap-2">
+            <BookOpen className="w-5 h-5 accent-mark" />
+            <h2 className="headline text-xl">Practice MCQ</h2>
+          </div>
+          <button
+            type="button"
+            onClick={loadMCQs}
+            disabled={mcqLoading}
+            className="brand-button px-4 py-2 text-xs font-mono font-semibold rounded-lg disabled:opacity-50"
+          >
+            {mcqLoading ? "Generating..." : mcqData ? "New Questions" : "Generate Questions"}
+          </button>
+        </div>
+
+        {mcqLoading && (
+          <div className="text-sm meta-text py-4">Generating practice questions from event content...</div>
+        )}
+
+        {mcqData && mcqData.mcqs.length > 0 && (
+          <div className="space-y-6">
+            {mcqData.used_fallback && (
+              <div className="text-xs font-mono text-[var(--text-muted)] bg-[var(--surface-muted)] p-2 rounded">
+                Questions generated using deterministic fallback (AI provider unavailable)
+              </div>
+            )}
+            {mcqData.mcqs.map((mcq, qIdx) => (
+              <MCQCard
+                key={qIdx}
+                mcq={mcq}
+                qIdx={qIdx}
+                selectedAnswer={selectedAnswers[qIdx]}
+                revealed={!!revealedAnswers[qIdx]}
+                onSelect={selectAnswer}
+                onReveal={revealAnswer}
+              />
+            ))}
+          </div>
+        )}
+
+        {mcqData && mcqData.mcqs.length === 0 && !mcqLoading && (
+          <p className="meta-text text-sm py-2">
+            Insufficient event data to generate practice questions safely.
+          </p>
+        )}
+      </section>
+
+      {/* Related Events */}
       <section className="space-y-4 pt-4">
         <div className="flex items-center justify-between border-b pb-3">
           <h2 className="headline text-xl flex items-center gap-2">
@@ -231,4 +396,80 @@ export function EventDetailView({ event, relatedEvents = [] }: EventDetailViewPr
       </section>
     </div>
   );
+}
+
+// ─── MCQ Card Component ─────────────────────────────────
+interface MCQCardProps {
+  mcq: MCQ;
+  qIdx: number;
+  selectedAnswer?: string;
+  revealed: boolean;
+  onSelect: (qIdx: number, letter: string) => void;
+  onReveal: (qIdx: number) => void;
+}
+
+function MCQCard({ mcq, qIdx, selectedAnswer, revealed, onSelect, onReveal }: MCQCardProps) {
+  return (
+    <div className="editorial-panel p-4 space-y-3">
+      <p className="text-sm font-semibold text-[var(--text-primary)]">
+        Q{qIdx + 1}. {mcq.question}
+      </p>
+      <div className="grid grid-cols-1 gap-2">
+        {mcq.options.map((opt, oIdx) => {
+          const letter = chr65(oIdx);
+          const isSelected = selectedAnswer === letter;
+          const isCorrect = mcq.correct_answer === letter;
+          let optClass = "editorial-card p-3 text-sm cursor-pointer transition-all";
+
+          if (revealed) {
+            if (isCorrect) {
+              optClass += " border-[var(--success)] bg-[var(--success-soft)]";
+            } else if (isSelected && !isCorrect) {
+              optClass += " border-[var(--danger)] bg-[var(--danger-soft)]";
+            }
+          } else if (isSelected) {
+            optClass += " border-[var(--brand-primary)] bg-[var(--brand-primary-soft)]";
+          } else {
+            optClass += " editorial-card-hover";
+          }
+
+          return (
+            <button
+              key={oIdx}
+              type="button"
+              onClick={() => onSelect(qIdx, letter)}
+              className={optClass}
+            >
+              <div className="flex items-center gap-2">
+                {revealed && isCorrect && <CheckCircle2 className="w-4 h-4 text-[var(--success)] shrink-0" />}
+                {revealed && isSelected && !isCorrect && <XCircle className="w-4 h-4 text-[var(--danger)] shrink-0" />}
+                <span>{opt}</span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex items-center gap-3">
+        {selectedAnswer && !revealed && (
+          <button
+            type="button"
+            onClick={() => onReveal(qIdx)}
+            className="brand-button px-4 py-1.5 text-xs font-mono font-semibold rounded-lg"
+          >
+            Check Answer
+          </button>
+        )}
+        {revealed && (
+          <div className="text-sm body-copy bg-[var(--surface-muted)] p-3 rounded-lg w-full">
+            <span className="font-semibold text-[var(--text-primary)]">Explanation: </span>
+            {mcq.explanation}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function chr65(idx: number): string {
+  return String.fromCharCode(65 + idx);
 }

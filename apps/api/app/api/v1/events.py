@@ -56,3 +56,30 @@ def get_event(event_id: int, db: Session = Depends(get_db)):
     if not event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
     return repo.to_event_response(event)
+
+
+@router.get("/{event_id}/exam-relevance")
+def get_event_exam_relevance(event_id: int, db: Session = Depends(get_db)):
+    from app.services.exam_intelligence import ExamIntelligenceService
+    service = ExamIntelligenceService(db)
+    result = service.get_event_exam_relevance(event_id)
+    if not result.get("relevant_exams") and not result.get("key_points"):
+        # Still return the structure, not a 404
+        pass
+    return result
+
+
+@router.get("/{event_id}/mcq")
+def get_event_mcq(
+    event_id: int,
+    exam_id: Optional[str] = Query(None),
+    count: int = Query(3, ge=1, le=5),
+    db: Session = Depends(get_db),
+):
+    from app.services.exam_intelligence import ExamIntelligenceService
+    service = ExamIntelligenceService(db)
+    result = service.generate_mcqs(event_id, exam_id=exam_id, count=count)
+    if result.get("error"):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=result["error"])
+    return result
+
