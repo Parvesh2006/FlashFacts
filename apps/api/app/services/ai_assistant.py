@@ -88,9 +88,7 @@ class FlashFactsAIAssistant:
         self.exam_service = ExamIntelligenceService(db)
         self.provider = provider or get_ai_provider()
 
-    def parse_query(
-        self, question: str, history: Optional[List[Dict[str, Any]]] = None
-    ) -> Dict[str, Any]:
+    def parse_query(self, question: str, history: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
         """Convert natural language question into structured filters."""
         import re
         from datetime import datetime, timezone, timedelta
@@ -164,9 +162,15 @@ class FlashFactsAIAssistant:
                 break
 
         for kw, domain_name in DOMAIN_KEYWORDS.items():
-            if re.search(rf"\b{re.escape(kw)}\b", q_lower):
-                filters["domain"] = domain_name
-                break
+            if re.search(r"\bscience\s*(?:&|and)\s*technology\b", q_lower):
+                filters["domains"] = ["Science", "Technology"]
+                filters["domain"] = "Science & Technology"
+            else:
+                for kw, domain_name in DOMAIN_KEYWORDS.items():
+                    if re.search(rf"\b{re.escape(kw)}\b", q_lower):
+                        filters["domains"] = [domain_name]
+                        filters["domain"] = domain_name
+                        break
 
         if any(w in q_lower for w in ["important", "high priority", "major", "top"]):
             filters["importance"] = "high"
@@ -247,66 +251,133 @@ class FlashFactsAIAssistant:
         }
 
     def _retrieve_candidate_events(self, filters: Dict[str, Any]) -> List[Event]:
-        """Retrieve candidate events based on structured filters."""
+        """Retrieve candidate events using strict geographic, domain and exam constraints."""
+
         domain = filters.get("domain")
+        domains = filters.get("domains") or ([domain] if domain else [])
         start_date = filters.get("start_date")
         end_date = filters.get("end_date")
         location_name = filters.get("location_name")
         query_text = filters.get("query_text")
+        exam_id = filters.get("exam_id")
 
-        events = []
+        events: List[Event] = []
 
+        # ---------------------------------------------------------
+        # 1. LOCATION IS A HARD FILTER
+        # ---------------------------------------------------------
         if location_name:
             loc = self.location_service.find_by_name(location_name)
-            if loc:
-                loc_res = self.location_service.get_location_events(loc.id, limit=50)
-                event_ids = [e["id"] for e in loc_res.get("events", [])]
-                if event_ids:
-                    events = self.db.query(Event).filter(Event.id.in_(event_ids)).all()
 
-        if not events or (domain and not any(e.domain and e.domain.lower() == domain.lower() for e in events)):
+            if loc:
+                loc_res = self.location_service.get_location_events(
+                    loc.id,
+                    limit=100
+                )
+
+                event_ids = [
+                    e["id"]
+                    for e in loc_res.get("events", [])
+                    if e.get("id")
+                ]
+
+                if event_ids:
+                    events = (
+                        self.db.query(Event)
+                        .filter(Event.id.in_(event_ids))
+                        .all()
+                    )
+
+            # If location was explicitly requested, NEVER fall back
+            # to global search.
+            if not events:
+                return []
+
+        # ---------------------------------------------------------
+        # 2. IF NO LOCATION WAS REQUESTED, NORMAL SEARCH IS ALLOWED
+        # ---------------------------------------------------------
+        else:
             if query_text and len(query_text) > 2:
                 events, _ = self.event_repo.search_events(
                     query_text=query_text,
-                    domain=domain,
+                    domain=None if len(domains) > 1 else domain,
                     start_date=start_date,
                     end_date=end_date,
+                    exam=exam_id,
                     limit=50,
                 )
 
-        if not events:
-            events, _ = self.event_repo.list_events(
-                domain=domain,
-                start_date=start_date,
-                end_date=end_date,
-                sort="important",
-                limit=50,
-            )
+            if not events:
+                events, _ = self.event_repo.list_events(
+                    domain=None if len(domains) > 1 else domain,
+                    start_date=start_date,
+                    end_date=end_date,
+                    exam=exam_id,
+                    sort="important",
+                    limit=50,
+                )
 
-        if domain:
-            events = [e for e in events if e.domain and e.domain.lower() == domain.lower()]
+        # ---------------------------------------------------------
+        # 3. DATE FILTER
+        # ---------------------------------------------------------
+        if start_date:
+            events = [
+                e for e in events
+                if e.event_date and e.event_date >= start_date.date()
+            ]
 
-        if not events:
-            return []
+        if end_date:
+            events = [
+                e for e in events
+                if e.event_date and e.event_date <= end_date.date()
+            ]
 
+        # ---------------------------------------------------------
+        # 4. DOMAIN FILTER
+        # ---------------------------------------------------------
+        if domains:
+            events = [
+                e for e in events
+                if e.domain and any(
+                    d.lower() == e.domain.lower()
+                    for d in domains
+                )
+            ]
+
+        # ---------------------------------------------------------
+        # 5. EXAM RELEVANCE
+        # ---------------------------------------------------------
         def score_event(e: Event) -> float:
             score = float(e.importance_score or 50)
-            if filters.get("importance") == "high":
-                if score < 60:
-                    score -= 50
-            if filters.get("exam_id"):
+
+            if filters.get("importance") == "high" and score < 60:
+                score -= 50
+
+            if exam_id:
                 rel = self.exam_service.get_event_exam_relevance(e.id)
                 exam_rels = rel.get("relevant_exams", [])
-                if any(r["exam_id"] == filters["exam_id"] for r in exam_rels):
+
+                if any(
+                    r.get("exam_id") == exam_id
+                    for r in exam_rels
+                ):
                     score += 20
                 else:
                     score -= 10
+
             return score
 
-        scored_events = [(e, score_event(e)) for e in events]
-        scored_events.sort(key=lambda x: x[1], reverse=True)
-        return [item[0] for item in scored_events[:10]]
+        scored_events = [
+            (event, score_event(event))
+            for event in events
+        ]
 
+        scored_events.sort(
+            key=lambda x: x[1],
+            reverse=True
+        )
+
+        return [event for event, _ in scored_events[:10]]
     def _synthesize_deterministic_answer(
         self, events: List[Event], filters: Dict[str, Any]
     ) -> str:
