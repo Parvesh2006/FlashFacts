@@ -32,6 +32,9 @@ class Event(Base):
     source = relationship("Source", back_populates="events")
     event_sources = relationship("EventSource", back_populates="event", cascade="all, delete-orphan")
     event_entities = relationship("EventEntity", back_populates="event", cascade="all, delete-orphan")
+    event_locations = relationship("EventLocation", back_populates="event", cascade="all, delete-orphan")
+    exam_metadata = relationship("EventExamMetadata", back_populates="event", uselist=False, cascade="all, delete-orphan")
+    exam_relevances = relationship("EventExamRelevance", back_populates="event", cascade="all, delete-orphan")
 
 
 class EventSource(Base):

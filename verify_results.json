@@ -1,0 +1,278 @@
+{
+  "Q1_india": {
+    "question": "What are the latest Indian current affairs?",
+    "events_found": 10,
+    "provider": "deterministic_grounded",
+    "filters": {
+      "date_range": "latest",
+      "state": "India",
+      "exam": null,
+      "domain": null
+    },
+    "sources": [
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/articles/cz64955d56po?at_medium=RSS&at_campaign=rss",
+        "date": "2026-08-31"
+      },
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/articles/c9w457e7ydlo?at_medium=RSS&at_campaign=rss",
+        "date": "2026-08-31"
+      },
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/articles/c0qxw1qw3g7o?at_medium=RSS&at_campaign=rss",
+        "date": "2026-09-01"
+      },
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/videos/cz6zp2pwzx5o?at_medium=RSS&at_campaign=rss",
+        "date": "2026-09-01"
+      },
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/videos/ckg7yrwp70qo?at_medium=RSS&at_campaign=rss",
+        "date": "2026-09-01"
+      },
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/articles/cvgy91nvy27o?at_medium=RSS&at_campaign=rss",
+        "date": "2026-08-31"
+      }
+    ],
+    "answer_ascii": "### Latest Current Affairs ? India (Competitive Exams)\n\n? **HIGH PRIORITY**\n\n**1. Japan Inc is betting big on India as China risks deepen**\n**What happened:** Japan Inc is betting big on India as China risks deepen. Japanese companies are doubling down on India amid a shrinking domestic market and rising risks in China.\n**Why it matters:** This development in Economy carries significant operational, policy, and public interest implications. Key stakeholders and domain analysts monitor these developments to evaluate long-term strategic impacts.\n**Exam Fact:** Domain: Economy | Category: General\n**Relevant exams:** TNPSC-G4 ? TNPSC-G2 ? SSC-CGL\n**Source:** BBC World News (2026-08-31)\n\n**2. US Supreme Court clears way for Trump to keep building White House ballroom**\n**What happened:** US Supreme Court clears way for Trump to keep building White House ballroom. But Chief Justice John Roberts dissents, writing that \"construction is likely unlawful\".\n**Why it matters:** This development in ",
+    "answer_length": 2946,
+    "mlops_metadata": null
+  },
+  "Q2_tn": {
+    "question": "What are the important Tamil Nadu current affairs?",
+    "events_found": 10,
+    "provider": "deterministic_grounded",
+    "filters": {
+      "date_range": "latest",
+      "state": "Tamil Nadu",
+      "exam": null,
+      "domain": null
+    },
+    "sources": [
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/articles/cz64955d56po?at_medium=RSS&at_campaign=rss",
+        "date": "2026-08-31"
+      },
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/articles/c9w457e7ydlo?at_medium=RSS&at_campaign=rss",
+        "date": "2026-08-31"
+      },
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/articles/c0qxw1qw3g7o?at_medium=RSS&at_campaign=rss",
+        "date": "2026-09-01"
+      },
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/videos/cz6zp2pwzx5o?at_medium=RSS&at_campaign=rss",
+        "date": "2026-09-01"
+      },
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/videos/ckg7yrwp70qo?at_medium=RSS&at_campaign=rss",
+        "date": "2026-09-01"
+      },
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/articles/cvgy91nvy27o?at_medium=RSS&at_campaign=rss",
+        "date": "2026-08-31"
+      }
+    ],
+    "answer_ascii": "### Latest Current Affairs ? Tamil Nadu (Competitive Exams)\n\n? **HIGH PRIORITY**\n\n**1. Japan Inc is betting big on India as China risks deepen**\n**What happened:** Japan Inc is betting big on India as China risks deepen. Japanese companies are doubling down on India amid a shrinking domestic market and rising risks in China.\n**Why it matters:** This development in Economy carries significant operational, policy, and public interest implications. Key stakeholders and domain analysts monitor these developments to evaluate long-term strategic impacts.\n**Exam Fact:** Domain: Economy | Category: General\n**Relevant exams:** TNPSC-G4 ? TNPSC-G2 ? SSC-CGL\n**Source:** BBC World News (2026-08-31)\n\n**2. US Supreme Court clears way for Trump to keep building White House ballroom**\n**What happened:** US Supreme Court clears way for Trump to keep building White House ballroom. But Chief Justice John Roberts dissents, writing that \"construction is likely unlawful\".\n**Why it matters:** This developmen",
+    "answer_length": 2951,
+    "mlops_metadata": null
+  },
+  "Q3_tnpsc": {
+    "question": "Give me important current affairs for TNPSC Group 4.",
+    "events_found": 10,
+    "provider": "deterministic_grounded",
+    "filters": {
+      "date_range": "latest",
+      "state": null,
+      "exam": "TNPSC-G4",
+      "domain": null
+    },
+    "sources": [
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/articles/cz64955d56po?at_medium=RSS&at_campaign=rss",
+        "date": "2026-08-31"
+      },
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/articles/c9w457e7ydlo?at_medium=RSS&at_campaign=rss",
+        "date": "2026-08-31"
+      },
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/articles/c0qxw1qw3g7o?at_medium=RSS&at_campaign=rss",
+        "date": "2026-09-01"
+      },
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/videos/cz6zp2pwzx5o?at_medium=RSS&at_campaign=rss",
+        "date": "2026-09-01"
+      },
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/videos/ckg7yrwp70qo?at_medium=RSS&at_campaign=rss",
+        "date": "2026-09-01"
+      },
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/articles/cvgy91nvy27o?at_medium=RSS&at_campaign=rss",
+        "date": "2026-08-31"
+      }
+    ],
+    "answer_ascii": "### Latest Current Affairs (TNPSC-G4)\n\n? **HIGH PRIORITY**\n\n**1. Japan Inc is betting big on India as China risks deepen**\n**What happened:** Japan Inc is betting big on India as China risks deepen. Japanese companies are doubling down on India amid a shrinking domestic market and rising risks in China.\n**Why it matters:** This development in Economy carries significant operational, policy, and public interest implications. Key stakeholders and domain analysts monitor these developments to evaluate long-term strategic impacts.\n**Exam Fact:** Domain: Economy | Category: General\n**Relevant exams:** TNPSC-G4 ? TNPSC-G2 ? SSC-CGL\n**Source:** BBC World News (2026-08-31)\n\n**2. US Supreme Court clears way for Trump to keep building White House ballroom**\n**What happened:** US Supreme Court clears way for Trump to keep building White House ballroom. But Chief Justice John Roberts dissents, writing that \"construction is likely unlawful\".\n**Why it matters:** This development in Government carrie",
+    "answer_length": 2929,
+    "mlops_metadata": null
+  },
+  "Q4_domain": {
+    "question": "Give me Indian science and technology current affairs from this month.",
+    "events_found": 10,
+    "provider": "deterministic_grounded",
+    "filters": {
+      "date_range": "this month",
+      "state": "India",
+      "exam": null,
+      "domain": "Technology"
+    },
+    "sources": [
+      {
+        "name": "TechCrunch",
+        "url": "https://techcrunch.com/2026/08/31/apples-top-app-store-exec-phil-schiller-follows-wave-of-exits-as-ceo-tim-cook-steps-down/",
+        "date": "2026-08-31"
+      },
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/articles/c2l80eq5lxno?at_medium=RSS&at_campaign=rss",
+        "date": "2026-08-31"
+      },
+      {
+        "name": "TechCrunch",
+        "url": "https://techcrunch.com/2026/08/31/a16z-brings-growth-fund-to-8-5b-days-after-launching-new-1-1b-fund/",
+        "date": "2026-08-31"
+      },
+      {
+        "name": "TechCrunch",
+        "url": "https://techcrunch.com/2026/08/31/polymarket-reportedly-raises-300-million-from-donald-trump-jr-s-investment-fund/",
+        "date": "2026-08-31"
+      },
+      {
+        "name": "TechCrunch",
+        "url": "https://techcrunch.com/2026/08/31/magna-increases-bet-on-battery-swapping-in-india-with-35m-for-yuma/",
+        "date": "2026-09-01"
+      },
+      {
+        "name": "TechCrunch",
+        "url": "https://techcrunch.com/2026/08/31/lachy-groom-backs-indian-startup-aiming-to-keep-aircraft-aloft-for-a-year/",
+        "date": "2026-09-01"
+      }
+    ],
+    "answer_ascii": "### This month Current Affairs ? India (Competitive Exams)\n\n? **HIGH PRIORITY**\n\n**1. Apple?s top App Store exec, Phil Schiller, follows wave of exits as CEO Tim Cook steps down**\n**What happened:** Apple?s top App Store exec, Phil Schiller, follows wave of exits as CEO Tim Cook steps down. The longtime executive won't be leaving Apple just yet but staff at the company say it's a step closer to Schiller retiring.\n**Why it matters:** This development in Technology carries significant operational, policy, and public interest implications. Key stakeholders and domain analysts monitor these developments to evaluate long-term strategic impacts.\n**Exam Fact:** Domain: Technology | Category: General\n**Relevant exams:** UPSC-CSE ? TNPSC-G4 ? TNPSC-G2\n**Source:** TechCrunch (2026-08-31)\n\n**2. Trump pushes Apple to change 'Lake Ontario' to 'Lake America' on its maps**\n**What happened:** Trump pushes Apple to change 'Lake Ontario' to 'Lake America' on its maps. The request comes after Google made",
+    "answer_length": 3104,
+    "mlops_metadata": null
+  },
+  "Q5_mcq": {
+    "question": "Create 5 MCQs from these current affairs.",
+    "events_found": 10,
+    "provider": "deterministic_grounded",
+    "filters": {
+      "date_range": "latest",
+      "state": null,
+      "exam": null,
+      "domain": null
+    },
+    "sources": [
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/articles/cz64955d56po?at_medium=RSS&at_campaign=rss",
+        "date": "2026-08-31"
+      },
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/articles/c9w457e7ydlo?at_medium=RSS&at_campaign=rss",
+        "date": "2026-08-31"
+      },
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/articles/c0qxw1qw3g7o?at_medium=RSS&at_campaign=rss",
+        "date": "2026-09-01"
+      },
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/videos/cz6zp2pwzx5o?at_medium=RSS&at_campaign=rss",
+        "date": "2026-09-01"
+      },
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/videos/ckg7yrwp70qo?at_medium=RSS&at_campaign=rss",
+        "date": "2026-09-01"
+      },
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/articles/cvgy91nvy27o?at_medium=RSS&at_campaign=rss",
+        "date": "2026-08-31"
+      }
+    ],
+    "answer_ascii": "### Latest Current Affairs (Competitive Exams)\n\n? **HIGH PRIORITY**\n\n**1. Japan Inc is betting big on India as China risks deepen**\n**What happened:** Japan Inc is betting big on India as China risks deepen. Japanese companies are doubling down on India amid a shrinking domestic market and rising risks in China.\n**Why it matters:** This development in Economy carries significant operational, policy, and public interest implications. Key stakeholders and domain analysts monitor these developments to evaluate long-term strategic impacts.\n**Exam Fact:** Domain: Economy | Category: General\n**Relevant exams:** TNPSC-G4 ? TNPSC-G2 ? SSC-CGL\n**Source:** BBC World News (2026-08-31)\n\n**2. US Supreme Court clears way for Trump to keep building White House ballroom**\n**What happened:** US Supreme Court clears way for Trump to keep building White House ballroom. But Chief Justice John Roberts dissents, writing that \"construction is likely unlawful\".\n**Why it matters:** This development in Governme",
+    "answer_length": 2938,
+    "mlops_metadata": null
+  },
+  "Q6_noevid": {
+    "question": "What happened in Antarctica in 2050?",
+    "events_found": 10,
+    "provider": "deterministic_grounded",
+    "filters": {
+      "date_range": "latest",
+      "state": null,
+      "exam": null,
+      "domain": null
+    },
+    "sources": [
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/articles/cz64955d56po?at_medium=RSS&at_campaign=rss",
+        "date": "2026-08-31"
+      },
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/articles/c9w457e7ydlo?at_medium=RSS&at_campaign=rss",
+        "date": "2026-08-31"
+      },
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/articles/c0qxw1qw3g7o?at_medium=RSS&at_campaign=rss",
+        "date": "2026-09-01"
+      },
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/videos/cz6zp2pwzx5o?at_medium=RSS&at_campaign=rss",
+        "date": "2026-09-01"
+      },
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/videos/ckg7yrwp70qo?at_medium=RSS&at_campaign=rss",
+        "date": "2026-09-01"
+      },
+      {
+        "name": "BBC World News",
+        "url": "https://www.bbc.co.uk/news/articles/cvgy91nvy27o?at_medium=RSS&at_campaign=rss",
+        "date": "2026-08-31"
+      }
+    ],
+    "answer_ascii": "### Latest Current Affairs (Competitive Exams)\n\n? **HIGH PRIORITY**\n\n**1. Japan Inc is betting big on India as China risks deepen**\n**What happened:** Japan Inc is betting big on India as China risks deepen. Japanese companies are doubling down on India amid a shrinking domestic market and rising risks in China.\n**Why it matters:** This development in Economy carries significant operational, policy, and public interest implications. Key stakeholders and domain analysts monitor these developments to evaluate long-term strategic impacts.\n**Exam Fact:** Domain: Economy | Category: General\n**Relevant exams:** TNPSC-G4 ? TNPSC-G2 ? SSC-CGL\n**Source:** BBC World News (2026-08-31)\n\n**2. US Supreme Court clears way for Trump to keep building White House ballroom**\n**What happened:** US Supreme Court clears way for Trump to keep building White House ballroom. But Chief Justice John Roberts dissents, writing that \"construction is likely unlawful\".\n**Why it matters:** This development in Governme",
+    "answer_length": 2938,
+    "mlops_metadata": null
+  }
+}

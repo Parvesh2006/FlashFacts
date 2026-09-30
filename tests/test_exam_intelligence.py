@@ -41,6 +41,17 @@ def test_exam_definitions_exist():
         assert "section_label" in defn
 
 
+def test_exams_endpoint_returns_required_exam_ids(client):
+    response = client.get("/api/v1/exams")
+    assert response.status_code == 200
+    data = response.json()
+    assert {exam["id"] for exam in data} == {
+        "tnpsc-group-4", "tnpsc-group-2", "ssc-cgl",
+        "ssc-chsl", "upsc-cse", "rrb-ntpc", "banking"
+    }
+    assert len(data) == 7
+
+
 def test_score_event_for_exam(db_session, test_source):
     """Test deterministic scoring of events for exam relevance."""
     event = Event(
@@ -129,4 +140,3 @@ def test_event_exam_relevance_endpoint_data(db_session, test_source):
     assert rel_data["event_id"] == event.id
     assert len(rel_data["relevant_exams"]) > 0
     assert len(rel_data["key_points"]) > 0
-

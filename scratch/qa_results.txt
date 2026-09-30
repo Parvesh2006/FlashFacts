@@ -1,0 +1,57 @@
+==================================================
+QUERY: What are the latest science and technology events from the last week?
+events_found: 10
+provider: deterministic_grounded
+filters: {'date_range': 'last week', 'state': None, 'exam': None, 'domain': 'Science,Technology'}
+Answer snippet:
+### Last week Current Affairs (Competitive Exams)
+
+🔴 **HIGH PRIORITY**
+
+**1. NASA Awards Launch Services for StarBurst Gamma-Ray Detector**
+**What happened:** NASA Awards Launch Services for StarBurst Gamma-Ray Detector. NASA has selected SpaceX to provide launch services for the agency’s StarBurst mission, a small satellite designed to investigate neutron star mergers and the origins of short gamma-ray bursts. StarBurst will launch aboard a Bandwagon rideshare mission on a Falcon 9 rocket from Space Launch Complex 40 at Cape Canaveral Space Force Station in Florida […]
+**Why it matters:** This development in Science carries significant operational, policy, and public interest implications. Key stakeholders and domain analysts monitor these developments to evaluate long-term strategic impa
+==================================================
+==================================================
+QUERY: Give me important TNPSC Group 4 current affairs
+events_found: 10
+provider: deterministic_grounded
+filters: {'date_range': 'latest', 'state': None, 'exam': 'TNPSC-G4', 'domain': None}
+Answer snippet:
+### Latest Current Affairs (TNPSC-G4)
+
+🔴 **HIGH PRIORITY**
+
+**1. AI is dominating the conversation at Climate Week**
+**What happened:** AI is dominating the conversation at Climate Week. This week, world leaders descended on Manhattan for the UN General Assembly. It’s also New York Climate Week—investors, policymakers, advocates, and journalists are colliding at panels, talks, and fancy dinners. With so many climate voices in one place, the discourse can feel a little louder than usual. This year, the unavoidable topic is artificial intelligence.…
+**Why it matters:** This development in Environment carries significant operational, policy, and public interest implications. Key stakeholders and domain analysts monitor these developments to evaluate long-term strategic impacts.
+**Exam Fact:**
+==================================================
+==================================================
+QUERY: Give me 5 MCQs from Indian science and technology current affairs
+events_found: 10
+provider: deterministic_grounded
+filters: {'date_range': 'latest', 'state': 'India', 'exam': None, 'domain': 'Science,Technology'}
+Answer snippet:
+### Latest Current Affairs | India (Competitive Exams)
+
+### Current Affairs Practice Quiz
+
+**Q1. Which of the following statements accurately reflects recent developments regarding What You Need to Know About NASA’s SpaceX Crew-13 Mission?**
+A) What You Need to Know About NASA’s SpaceX Crew-13 Mission. Four crew members are set to launch to the International Space Station as part of NASA’s SpaceX Crew-13 mission to perform research, technology demonstrations, and maintenance aboard the orbiting laboratory.
+B) The event was cancelled due to international pressure.
+C) It was entirely unrelated to the current affairs domain.
+D) None of the above.
+**Correct Answer: A**
+**Explanation:** This development in Science carries significant operational, policy, and public interest implications. Key st
+==================================================
+==================================================
+QUERY: Give me verified FlashFacts updates about Antarctic research in 2050
+events_found: 0
+provider: grounded_fallback
+filters: {'date_range': 'latest', 'country': None, 'state': None, 'exam': None, 'domain': None}
+Answer snippet:
+I couldn't find enough verified FlashFacts data for that query.
+
+Try broadening your date range, selecting another location, or searching another exam category.
+==================================================

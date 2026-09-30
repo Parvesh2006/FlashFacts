@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Calendar,
   Clock,
@@ -15,15 +15,17 @@ import {
   CheckCircle2,
   XCircle,
   Tag,
+  MapPin,
+  GitCommit,
 } from "lucide-react";
-import { Event } from "@/types/event";
-import { Event, EventExamIntelligence, MCQ, MCQResponse } from "@/types/event";
 import type { Event, EventExamIntelligence, MCQ, MCQResponse } from "@/types/event";
+import type { EventLocationResponse, EventTimelineResponse } from "@/types/location";
 import { DomainBadge } from "@/components/common/badge";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { EventCard } from "./event-card";
 import { BackButton } from "@/components/navigation/back-button";
 import { fetchEventExamRelevance, fetchEventMCQ } from "@/services/exams";
+import { fetchEventLocations, fetchEventTimeline } from "@/services/locations";
 
 interface EventDetailViewProps {
   event: Event;
@@ -35,6 +37,10 @@ export function EventDetailView({ event, relatedEvents = [] }: EventDetailViewPr
 
   const [examData, setExamData] = useState<EventExamIntelligence | null>(null);
   const [examLoading, setExamLoading] = useState(true);
+
+  const [locationData, setLocationData] = useState<EventLocationResponse | null>(null);
+  const [timelineData, setTimelineData] = useState<EventTimelineResponse | null>(null);
+
   const [mcqData, setMcqData] = useState<MCQResponse | null>(null);
   const [mcqLoading, setMcqLoading] = useState(false);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
@@ -46,6 +52,14 @@ export function EventDetailView({ event, relatedEvents = [] }: EventDetailViewPr
       .then(setExamData)
       .catch(() => setExamData(null))
       .finally(() => setExamLoading(false));
+
+    fetchEventLocations(event.id)
+      .then(setLocationData)
+      .catch(() => setLocationData(null));
+
+    fetchEventTimeline(event.id)
+      .then(setTimelineData)
+      .catch(() => setTimelineData(null));
   }, [event.id]);
 
   const loadMCQs = () => {
@@ -90,6 +104,14 @@ export function EventDetailView({ event, relatedEvents = [] }: EventDetailViewPr
         <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4">
           <div className="flex flex-wrap items-center gap-3">
             <DomainBadge domain={event.domain || "General"} className="text-xs py-1 px-3" />
+
+            {locationData && locationData.locations.length > 0 && (
+              <div className="flex items-center gap-1.5 font-mono text-xs text-[var(--brand-primary)] bg-[var(--brand-primary-soft)] px-2.5 py-1 rounded-md border border-[var(--brand-primary-border)]">
+                <MapPin className="w-3.5 h-3.5" />
+                <span>{locationData.locations.map((l) => l.name).join(" · ")}</span>
+              </div>
+            )}
+
             {event.event_type && (
               <span className="soft-badge text-xs px-2.5 py-1 rounded-md flex items-center gap-1">
                 <Tag className="w-3 h-3" />
@@ -98,22 +120,14 @@ export function EventDetailView({ event, relatedEvents = [] }: EventDetailViewPr
             )}
             <span className="status-success flex items-center gap-1 text-xs font-mono px-2.5 py-1 rounded-md">
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>{confidencePercent}% Verification Confidence</span>
               <span>{confidencePercent}% Confidence</span>
             </span>
-            {event.processing_status && (
-              <span className={`text-xs font-mono px-2.5 py-1 rounded-md ${
-                event.processing_status === "completed" ? "status-success" : "status-warning"
-              }`}>
-                {event.processing_status === "completed" ? "AI Enriched" : event.processing_status}
-              </span>
-            )}
           </div>
 
           <button
             type="button"
             onClick={handleShare}
-            className="button-base button-secondary icon-button flex items-center gap-1.5 px-3 py-1"
+            className="button-base button-secondary icon-button flex items-center gap-1.5 px-3 py-1 text-xs"
           >
             <Share2 className="w-3.5 h-3.5" />
             <span>Share</span>
@@ -143,7 +157,6 @@ export function EventDetailView({ event, relatedEvents = [] }: EventDetailViewPr
         </div>
 
         <div className="space-y-2">
-          <h2 className="eyebrow">Executive Intelligence Summary</h2>
           <h2 className="eyebrow">Intelligence Summary</h2>
           <p className="body-copy text-base md:text-lg bg-[var(--surface-muted)] border p-5 rounded-lg">
             {event.summary}
@@ -212,6 +225,34 @@ export function EventDetailView({ event, relatedEvents = [] }: EventDetailViewPr
           )}
         </div>
 
+        {/* Event Timeline Section */}
+        {timelineData && timelineData.timeline.length > 0 && (
+          <div className="pt-4 border-t space-y-3">
+            <div className="flex items-center gap-2">
+              <GitCommit className="w-4 h-4 accent-mark" />
+              <h3 className="eyebrow">Event Chronology & Context</h3>
+            </div>
+            <div className="space-y-2">
+              {timelineData.timeline.map((node,index) => (
+                <div
+                   key={`${node.event_id}-${node.position}-${index}`}
+                  className={`p-3 rounded-lg border text-xs font-mono flex items-center justify-between gap-3 ${
+                    node.position === "CURRENT"
+                      ? "border-[var(--brand-primary)] bg-[var(--brand-primary-soft)] font-bold text-[var(--text-primary)]"
+                      : "bg-[var(--surface-muted)] text-[var(--text-secondary)]"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="soft-badge px-2 py-0.5 text-[10px] shrink-0">{node.position}</span>
+                    <span className="truncate">{node.title}</span>
+                  </div>
+                  <span className="shrink-0 meta-text">{node.event_date}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {event.source_url && (
           <div className="p-4 rounded-lg border border-[var(--accent-border)] bg-[var(--accent-soft)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="space-y-1">
@@ -260,12 +301,6 @@ export function EventDetailView({ event, relatedEvents = [] }: EventDetailViewPr
                   <span>Record Updated:</span>{" "}
                   <span className="text-[var(--text-primary)]">{formatDateTime(event.updated_at)}</span>
                 </div>
-                {event.ai_processed_at && (
-                  <div>
-                    <span>AI Processed:</span>{" "}
-                    <span className="text-[var(--text-primary)]">{formatDateTime(event.ai_processed_at)}</span>
-                  </div>
-                )}
               </div>
             </div>
           </details>
@@ -348,7 +383,7 @@ export function EventDetailView({ event, relatedEvents = [] }: EventDetailViewPr
           <div className="space-y-6">
             {mcqData.used_fallback && (
               <div className="text-xs font-mono text-[var(--text-muted)] bg-[var(--surface-muted)] p-2 rounded">
-                Questions generated using deterministic fallback (AI provider unavailable)
+                Source-grounded deterministic MCQ fallback (AI provider unavailable)
               </div>
             )}
             {mcqData.mcqs.map((mcq, qIdx) => (
@@ -416,10 +451,10 @@ function MCQCard({ mcq, qIdx, selectedAnswer, revealed, onSelect, onReveal }: MC
       </p>
       <div className="grid grid-cols-1 gap-2">
         {mcq.options.map((opt, oIdx) => {
-          const letter = chr65(oIdx);
+          const letter = String.fromCharCode(65 + oIdx);
           const isSelected = selectedAnswer === letter;
           const isCorrect = mcq.correct_answer === letter;
-          let optClass = "editorial-card p-3 text-sm cursor-pointer transition-all";
+          let optClass = "editorial-card p-3 text-sm cursor-pointer transition-all text-left";
 
           if (revealed) {
             if (isCorrect) {
@@ -468,8 +503,4 @@ function MCQCard({ mcq, qIdx, selectedAnswer, revealed, onSelect, onReveal }: MC
       </div>
     </div>
   );
-}
-
-function chr65(idx: number): string {
-  return String.fromCharCode(65 + idx);
 }

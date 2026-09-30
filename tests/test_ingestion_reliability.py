@@ -106,6 +106,10 @@ def test_source_failure_does_not_stop_other_sources(db_session):
     assert result["sources_failed"] == 1
     assert result["documents_ingested"] == 1
     assert healthy.last_error is None
+    assert healthy.last_attempted_at is not None
+    assert healthy.last_ingested_at is not None
+    assert failed.last_attempted_at is not None
+    assert failed.last_ingested_at is None
 
 
 def test_stale_entries_are_skipped_when_freshness_is_configured(db_session, monkeypatch):

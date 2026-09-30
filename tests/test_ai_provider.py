@@ -100,3 +100,10 @@ def test_fallback_importance_score_is_bounded_and_deterministic():
     assert first["importance_score"] == second["importance_score"]
     assert 0 <= first["importance_score"] <= 100
     assert isinstance(first["importance_score"], int)
+
+
+def test_fallback_provider_does_not_fake_semantic_embeddings():
+    provider = FallbackAIProvider()
+
+    with pytest.raises(NotImplementedError):
+        provider.generate_embedding("semantic similarity text")

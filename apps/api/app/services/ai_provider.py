@@ -196,10 +196,10 @@ class FallbackAIProvider(AIProvider):
         }
 
     def generate_embedding(self, text: str) -> List[float]:
-        # Pseudo-embedding fallback vector (length 128)
-        import hashlib
-        h = hashlib.sha256(text.encode("utf-8")).digest()
-        return [round((b - 128) / 128.0, 4) for b in h[:32]] * 4
+        raise NotImplementedError(
+            "FallbackAIProvider does not provide semantic embeddings. "
+            "Configure an OpenAI-compatible provider for vector search."
+        )
 
 
 class OpenAIProvider(AIProvider):

@@ -329,7 +329,7 @@ export default function ExamsPage() {
               <div className="space-y-6">
                 {mcqData.used_fallback && (
                   <div className="text-xs font-mono text-[var(--text-muted)] bg-[var(--surface-muted)] p-2 rounded">
-                    Questions generated using deterministic fallback (AI provider offline)
+                    Source-grounded deterministic MCQ fallback (AI provider offline)
                   </div>
                 )}
                 {mcqData.mcqs.map((mcq, qIdx) => (

@@ -1,6 +1,5 @@
 import logging
 import time
-from datetime import datetime, timezone
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, List, Optional, Tuple
 import feedparser
@@ -51,16 +50,11 @@ class IngestionService:
 
     def fetch_feed(self, feed_url: str) -> Tuple[Optional[feedparser.FeedParserDict], Optional[int], Optional[str]]:
         """
-        Fetch a feed URL with error handling.
         Fetch a feed URL with error handling and retry mechanism.
         
         Returns:
             Tuple of (parsed_feed, http_status, error_message)
         """
-        try:
-            with httpx.Client(timeout=10.0, follow_redirects=True) as client:
-                headers = {"User-Agent": "FlashFactsIngestionWorker/1.0"}
-                resp = client.get(feed_url, headers=headers)
         retryable_statuses = {429, 500, 502, 503, 504}
         max_retries = getattr(settings, "INGESTION_MAX_RETRIES", 3)
         attempts = max(1, max_retries + 1)
@@ -78,23 +72,6 @@ class IngestionService:
                     last_status = resp.status_code
 
                 if resp.status_code == 200:
-                    return feedparser.parse(resp.text), resp.status_code, None
-                else:
-                    error_msg = f"HTTP {resp.status_code} fetching feed {feed_url}"
-                    logger.warning(error_msg)
-                    return None, resp.status_code, error_msg
-        except httpx.TimeoutException as e:
-            error_msg = f"Timeout fetching feed {feed_url}: {e}"
-            logger.error(error_msg)
-            return None, None, error_msg
-        except httpx.RequestError as e:
-            error_msg = f"Request error fetching feed {feed_url}: {e}"
-            logger.error(error_msg)
-            return None, None, error_msg
-        except Exception as e:
-            error_msg = f"Error fetching feed {feed_url}: {e}"
-            logger.error(error_msg)
-            return None, None, error_msg
                     raw_content = getattr(resp, "content", getattr(resp, "text", ""))
                     parsed = feedparser.parse(raw_content)
                     if getattr(parsed, "bozo", False) and not getattr(parsed, "entries", None):
@@ -120,17 +97,8 @@ class IngestionService:
                 backoff = getattr(settings, "INGESTION_RETRY_BACKOFF", 1.0) * (2 ** (attempt - 1))
                 time.sleep(backoff)
 
-        return None, last_status, last_error
-
-
         logger.warning(f"Feed fetch failed: url={feed_url} attempts={attempts} error={last_error}")
-        status = None
-        if last_error and last_error.startswith("HTTP "):
-            try:
-                status = int(last_error.split()[1])
-            except Exception:
-                pass
-        return None, status, last_error or "Malformed or empty feed"
+        return None, last_status, last_error or "Feed fetch failed"
 
     def ingest_source(self, source: Source, ingestion_run: IngestionRun) -> SourceIngestionMetric:
         """
@@ -150,6 +118,7 @@ class IngestionService:
         
         try:
             logger.info(f"Ingestion started for source: '{source.name}' (ID: {source.id})")
+            source.last_attempted_at = datetime.now(timezone.utc)
             
             # 1. Fetch Feed
             feed, http_status, error_msg = self.fetch_feed(source.feed_url)
@@ -163,15 +132,7 @@ class IngestionService:
                     metric.error_message = f"Empty or invalid feed for source '{source.name}'"
                     metric.status = "invalid_feed"
                 
-                metric.completed_at = datetime.now(timezone.utc)
-                metric.processing_time_ms = (time.time() - start_time) * 1000
-                self.db.add(metric)
-                self.db.commit()
                 logger.warning(f"Failed to ingest source '{source.name}': {metric.error_message}")
-                
-                # Still update source.last_ingested_at
-                source.last_ingested_at = datetime.now(timezone.utc)
-                self.db.commit()
                 return metric
 
             metric.documents_discovered = len(feed.entries)
@@ -303,9 +264,8 @@ class IngestionService:
             metric.processing_time_ms = (time.time() - start_time) * 1000
             self.db.add(metric)
             
-            # Update source.last_ingested_at
-            source.last_ingested_at = datetime.now(timezone.utc)
             if metric.status == "success":
+                source.last_ingested_at = datetime.now(timezone.utc)
                 source.last_error = None
             elif metric.error_message:
                 source.last_error = metric.error_message

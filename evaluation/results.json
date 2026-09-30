@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-10T14:14:08.106667+00:00",
+  "timestamp": "2026-09-25T16:49:50.283118+00:00",
   "dataset": {
     "name": "Benchmark",
     "version": "v1",
@@ -32,10 +32,10 @@
       "failure_rate": 0.0
     },
     "latency": {
-      "average_ms": 1.064825,
-      "median_ms": 0.5684,
-      "min_ms": 0.3043,
-      "max_ms": 2.8182
+      "average_ms": 1.357125,
+      "median_ms": 0.61975,
+      "min_ms": 0.5996,
+      "max_ms": 3.5894
     }
   },
   "predictions": [
@@ -123,5 +123,11 @@
   "software": {
     "name": "FlashFacts",
     "version": "1.0.0"
+  },
+  "mlops_metadata": {
+    "ai_provider": "fallback",
+    "ai_model": "gpt-4o-mini",
+    "prompt_version": "v1",
+    "application_version": "1.0.0"
   }
 }

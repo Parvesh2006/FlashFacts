@@ -1,5 +1,6 @@
 from datetime import datetime, date
 from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.source import SourceResponse
@@ -11,6 +12,28 @@ class EntityResponse(BaseModel):
     entity_type: str
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ExamRelevanceItemResponse(BaseModel):
+    exam_type: str
+    relevance_level: str
+    relevance_score: int
+    explanation: Optional[str] = None
+
+
+class ExamFactItemResponse(BaseModel):
+    label: str
+    value: str
+
+
+class EventExamIntelligenceResponse(BaseModel):
+    exam_importance: Optional[str] = "USEFUL"
+    geographic_level: Optional[str] = "INDIA"
+    primary_state: Optional[str] = None
+    why_it_matters: Optional[str] = None
+    exam_facts: List[ExamFactItemResponse] = Field(default_factory=list)
+    question_angles: List[str] = Field(default_factory=list)
+    relevances: List[ExamRelevanceItemResponse] = Field(default_factory=list)
 
 
 class EventBase(BaseModel):
@@ -44,6 +67,7 @@ class EventResponse(EventBase):
     entities: List[EntityResponse] = Field(default_factory=list)
     source_count: int = 1
     sources: List[SourceResponse] = Field(default_factory=list)
+    exam_intelligence: Optional[EventExamIntelligenceResponse] = None
     created_at: datetime
     updated_at: datetime
 

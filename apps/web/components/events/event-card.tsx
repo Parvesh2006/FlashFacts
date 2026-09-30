@@ -1,6 +1,13 @@
 import React from "react";
 import Link from "next/link";
-import { Calendar, ExternalLink, ArrowRight, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  Calendar,
+  ExternalLink,
+  ArrowRight,
+  ShieldCheck,
+  Sparkles,
+  GraduationCap,
+} from "lucide-react";
 import { Event } from "@/types/event";
 import { DomainBadge } from "@/components/common/badge";
 import { formatDate } from "@/lib/utils";
@@ -12,21 +19,41 @@ interface EventCardProps {
 
 export function EventCard({ event, compact = false }: EventCardProps) {
   const confidencePercent = Math.round((event.confidence_score || 1.0) * 100);
+  const examIntel = event.exam_intelligence;
 
   return (
     <div className="editorial-card editorial-card-hover group/card p-5 flex flex-col justify-between h-full">
       <div>
           <div className="flex items-center justify-between gap-2 mb-3">
+        <div className="flex items-center justify-between gap-2 mb-3">
           <DomainBadge domain={event.domain || "General"} />
           <div className="flex items-center gap-1.5 meta-text">
             <Calendar className="w-3.5 h-3.5 accent-mark" />
             <span>{formatDate(event.event_date)}</span>
           </div>
+        </div>
 
         <p className="meta-text mb-2 truncate" title={event.source || undefined}>
           {event.source || "Unknown source"}
         </p>
         </div>
+
+        {examIntel && (
+          <div className="flex flex-wrap items-center gap-1.5 mb-3 text-[11px] font-mono">
+            <span className="px-2 py-0.5 rounded bg-blue-950/60 text-blue-300 border border-blue-800/50 flex items-center gap-1">
+              <GraduationCap className="w-3 h-3 text-blue-400" />
+              <span>{examIntel.geographic_level}</span>
+            </span>
+            <span className="px-2 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-800/50">
+              {examIntel.exam_importance}
+            </span>
+            {examIntel.primary_state && (
+              <span className="px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-800/50">
+                {examIntel.primary_state}
+              </span>
+            )}
+          </div>
+        )}
 
         <Link href={`/event/${event.id}`} className="group">
           <h3 className="headline text-lg group-hover:text-[var(--brand-primary)] transition-colors line-clamp-2 mb-2">

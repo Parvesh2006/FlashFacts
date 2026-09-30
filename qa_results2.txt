@@ -1,0 +1,61 @@
+==================================================
+TEST A QUERY: Give me 5 MCQs from Indian science and technology current affairs
+events_found: 10
+provider: deterministic_grounded
+filters: {'date_range': 'latest', 'state': None, 'exam': None, 'domain': 'Science,Technology'}
+Answer snippet:
+### Latest Current Affairs (Competitive Exams)
+
+### Current Affairs Practice Quiz
+
+**Q1. Which of the following statements accurately reflects recent developments regarding What You Need to Know About NASA’s SpaceX Crew-13 Mission?**
+A) What You Need to Know About NASA’s SpaceX Crew-13 Mission. Four crew members are set to launch to the International Space Station as part of NASA’s SpaceX Crew-13 mission to perform research, technology demonstrations, and maintenance aboard the orbiting laboratory.
+B) The event was cancelled due to international pressure.
+C) It was entirely unrelated to the current affairs domain.
+D) None of the above.
+**Correct Answer: A**
+**Explanation:** This development in Science carries significant operational, policy, and public interest implications. Key stakeholde
+==================================================
+==================================================
+TEST B QUERY: Give me important TNPSC Group 4 current affairs
+events_found: 10
+provider: deterministic_grounded
+filters: {'date_range': 'latest', 'state': None, 'exam': 'TNPSC-G4', 'domain': None}
+Answer snippet:
+### Latest Current Affairs (TNPSC-G4)
+
+🔴 **HIGH PRIORITY**
+
+**1. Coming soon: Our 2026 list of Climate Tech Companies to Watch**
+**What happened:** Coming soon: Our 2026 list of Climate Tech Companies to Watch. Earlier this month, the UN announced the planet will tip past 1.5 ˚C of warming, “likely within the next few years,” squashing any lingering hope that nations would cut emissions fast enough to achieve the loftiest goal of the Paris climate agreement. In the US, the world’s second-largest-emitting country, its leader continues to deny climate&#8230;
+**Why it matters:** This development in Environment carries significant operational, policy, and public interest implications. Key stakeholders and domain analysts monitor these developments to evaluate long-term strategic impacts.
+**Exa
+==================================================
+==================================================
+TEST C QUERY: What are the major science and technology events from the last week?
+events_found: 10
+provider: deterministic_grounded
+filters: {'date_range': 'last week', 'state': None, 'exam': None, 'domain': 'Science,Technology'}
+Answer snippet:
+### Last week Current Affairs (Competitive Exams)
+
+🔴 **HIGH PRIORITY**
+
+**1. NASA Awards Launch Services for StarBurst Gamma-Ray Detector**
+**What happened:** NASA Awards Launch Services for StarBurst Gamma-Ray Detector. NASA has selected SpaceX to provide launch services for the agency’s StarBurst mission, a small satellite designed to investigate neutron star mergers and the origins of short gamma-ray bursts. StarBurst will launch aboard a Bandwagon rideshare mission on a Falcon 9 rocket from Space Launch Complex 40 at Cape Canaveral Space Force Station in Florida [&#8230;]
+**Why it matters:** This development in Science carries significant operational, policy, and public interest implications. Key stakeholders and domain analysts monitor these developments to evaluate long-term strategi
+==================================================
+==================================================
+TEST D QUERY: What happened in Tamil Nadu this week?
+events_found: 10
+provider: deterministic_grounded
+filters: {'date_range': 'this week', 'state': 'Tamil Nadu', 'exam': None, 'domain': None}
+Answer snippet:
+### This week Current Affairs | Tamil Nadu (Competitive Exams)
+
+🔴 **HIGH PRIORITY**
+
+**1. Coming soon: Our 2026 list of Climate Tech Companies to Watch**
+**What happened:** Coming soon: Our 2026 list of Climate Tech Companies to Watch. Earlier this month, the UN announced the planet will tip past 1.5 ˚C of warming, “likely within the next few years,” squashing any lingering hope that nations would cut emissions fast enough to achieve the loftiest goal of the Paris climate agreement. In the US, the world’s second-largest-emitting country, its leader continues to deny climate&#8230;
+**Why it matters:** This development in Environment carries significant operational, policy, and public interest implications. Key stakeholders and domain analysts monitor these developments to evaluate long-term
+==================================================
