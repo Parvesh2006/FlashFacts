@@ -2,6 +2,7 @@ import os
 import re
 from pathlib import Path
 from typing import List, Optional
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from fastapi.responses import FileResponse, RedirectResponse
@@ -198,6 +199,36 @@ def get_pyq_paper(paper_id: str, db: Session = Depends(get_db)):
 
 
 
+_AUTHORITY_HOSTS = {
+    "TNPSC": {"tnpsc.gov.in", "www.tnpsc.gov.in"},
+    "UPSC": {"upsc.gov.in", "www.upsc.gov.in"},
+    "SSC": {"ssc.gov.in", "www.ssc.gov.in"},
+    "RRB": {"rrbcdg.gov.in", "www.rrbcdg.gov.in"},
+}
+
+
+def _safe_authority_source_url(paper) -> Optional[str]:
+    """Return an HTTPS source URL only when its authority host is approved."""
+    source = (paper.source_url or "").strip()
+    try:
+        parsed = urlsplit(source)
+        hostname = (parsed.hostname or "").lower()
+        allowed = _AUTHORITY_HOSTS.get(
+            (paper.exam_category or "").upper(), set()
+        )
+        if (
+            parsed.scheme == "https"
+            and hostname in allowed
+            and parsed.username is None
+            and parsed.password is None
+            and parsed.port in (None, 443)
+        ):
+            return source
+    except ValueError:
+        pass
+    return None
+
+
 def _require_source_page(paper):
     """Permit local PDF access only after explicit verification."""
     if paper.availability_status == "restricted":
@@ -207,8 +238,8 @@ def _require_source_page(paper):
         )
 
     if paper.verification_status != "verified_official":
-        source = paper.source_url or ""
-        if source.startswith("https://"):
+        source = _safe_authority_source_url(paper)
+        if source:
             return RedirectResponse(url=source, status_code=307)
         raise HTTPException(
             status_code=404,
@@ -236,8 +267,8 @@ def view_pyq_paper_pdf(paper_id: str, db: Session = Depends(get_db)):
             filename=f"{paper.id}.pdf",
         )
 
-    source = paper.source_url or ""
-    if source.startswith("https://"):
+    source = _safe_authority_source_url(paper)
+    if source:
         return RedirectResponse(url=source, status_code=307)
 
     raise HTTPException(status_code=404, detail="Verified PDF is unavailable.")
@@ -255,8 +286,8 @@ def download_pyq_paper_pdf(paper_id: str, db: Session = Depends(get_db)):
         return redirect
 
     if paper.redistribution_status != "official_open_access":
-        source = paper.source_url or ""
-        if source.startswith("https://"):
+        source = _safe_authority_source_url(paper)
+        if source:
             return RedirectResponse(url=source, status_code=307)
         raise HTTPException(
             status_code=403,
@@ -265,8 +296,8 @@ def download_pyq_paper_pdf(paper_id: str, db: Session = Depends(get_db)):
 
     local_file = resolve_safe_pdf_path(paper.storage_path)
     if not local_file or not verify_pdf_magic_bytes(local_file):
-        source = paper.source_url or ""
-        if source.startswith("https://"):
+        source = _safe_authority_source_url(paper)
+        if source:
             return RedirectResponse(url=source, status_code=307)
         raise HTTPException(status_code=404, detail="Verified PDF is unavailable.")
 

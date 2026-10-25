@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from app.api.v1.pyqs import resolve_safe_pdf_path, verify_pdf_magic_bytes
+from app.api.v1.pyqs import resolve_safe_pdf_path, verify_pdf_magic_bytes, _safe_authority_source_url
 from app.models.pyq_paper import PYQPaper
 from app.schemas.pyq_paper import PYQPaperCreate
 from app.repositories.pyq_paper_repository import PYQPaperRepository
@@ -252,3 +252,27 @@ def test_duplicate_checksum_rejection(client: TestClient):
     res = client.post("/api/v1/pyqs/papers", json=duplicate_payload, headers=headers)
     assert res.status_code == 400
     assert "duplicate" in res.json().get("detail", "").lower()
+
+
+
+@pytest.mark.parametrize(
+    ("category", "source_url", "expected"),
+    [
+        ("TNPSC", "https://www.tnpsc.gov.in", "https://www.tnpsc.gov.in"),
+        ("UPSC", "https://upsc.gov.in/examinations/previous-question-papers",
+         "https://upsc.gov.in/examinations/previous-question-papers"),
+        ("SSC", "https://ssc.gov.in", "https://ssc.gov.in"),
+        ("RRB", "https://www.rrbcdg.gov.in", "https://www.rrbcdg.gov.in"),
+        ("TNPSC", "http://www.tnpsc.gov.in", None),
+        ("TNPSC", "https://evil.example", None),
+        ("TNPSC", "https://www.tnpsc.gov.in.evil.example", None),
+        ("TNPSC", "https://user@www.tnpsc.gov.in", None),
+        ("UNKNOWN", "https://unknown.gov.in", None),
+        ("TNPSC", "javascript:alert(1)", None),
+    ],
+)
+def test_safe_authority_source_url(category, source_url, expected):
+    from types import SimpleNamespace
+
+    paper = SimpleNamespace(exam_category=category, source_url=source_url)
+    assert _safe_authority_source_url(paper) == expected
