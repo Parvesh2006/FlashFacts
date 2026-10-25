@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { navItems } from "./sidebar";
-import { LayoutDashboard, Compass, Calendar, Search, X } from "lucide-react";
+import { LayoutDashboard, GraduationCap, BookOpen, Target, Search, X } from "lucide-react";
 
 interface MobileNavProps {
   isOpen: boolean;
@@ -24,7 +24,7 @@ export function MobileDrawer({ isOpen, onClose }: MobileNavProps) {
       />
 
       <div className="mobile-drawer fixed inset-y-0 left-0 w-72 bg-[var(--surface)] border-r p-5 shadow-2xl flex flex-col justify-between">
-        <div>
+        <div className="overflow-y-auto max-h-[85vh]">
           <div className="flex items-center justify-between pb-4 border-b">
             <span className="font-extrabold text-[var(--text-primary)] tracking-normal">
               FLASHFACTS MENU
@@ -61,7 +61,7 @@ export function MobileDrawer({ isOpen, onClose }: MobileNavProps) {
         </div>
 
         <div className="pt-4 border-t meta-text">
-          Current Affairs Intelligence Platform
+          Exam Intelligence Platform v2.5
         </div>
       </div>
     </div>
@@ -73,9 +73,10 @@ export function MobileBottomBar() {
   const pathname = usePathname();
 
   const mainTabs = [
-    { name: "Dashboard", href: "/", icon: LayoutDashboard },
-    { name: "Explore", href: "/explore", icon: Compass },
-    { name: "Calendar", href: "/calendar", icon: Calendar },
+    { name: "Overview", href: "/", icon: LayoutDashboard },
+    { name: "Exams", href: "/exams", icon: GraduationCap },
+    { name: "PYQs", href: "/pyqs", icon: BookOpen },
+    { name: "Mocks", href: "/mock-tests", icon: Target },
     { name: "Search", href: "/search", icon: Search },
   ];
 

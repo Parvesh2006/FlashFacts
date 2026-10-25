@@ -25,13 +25,13 @@ function QuizRenderer({ content }: { content: string }) {
       <div className="space-y-6">
         {questions.map((q, idx) => {
           const lines = q.split('\n').map(l => l.trim()).filter(Boolean);
-          const firstLine = lines[0]; 
-          let questionText = firstLine.replace(/\*\*$/, '').trim();
-          
+          const firstLine = lines[0];
+          const questionText = firstLine.replace(/\*\*$/, '').trim();
+
           const options = [];
           let correctAnswer = '';
           let explanation = '';
-          
+
           for (let i = 1; i < lines.length; i++) {
             const line = lines[i];
             if (line.match(/^[A-D]\)/)) {
@@ -59,7 +59,7 @@ function QuizRenderer({ content }: { content: string }) {
                   </div>
                 ))}
               </div>
-              
+
               {(correctAnswer || explanation) && (
                 <div className="mt-4 pt-4 border-t border-[var(--surface-border)]">
                   {correctAnswer && (
@@ -94,7 +94,7 @@ function EventRenderer({ content }: { content: string }) {
   if (titleMatch) {
     title = titleMatch[1];
   }
-  
+
   let priorityLabel = null;
   if (headerBlock.includes("🔴 **HIGH PRIORITY**")) {
     priorityLabel = "HIGH PRIORITY";
@@ -124,8 +124,8 @@ function EventRenderer({ content }: { content: string }) {
       <div className="space-y-6">
         {eventBlocks.map((block, idx) => {
           const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
-          let headline = lines[0].replace(/^\*\*\d+\.\s*/, '').replace(/\*\*$/, '');
-          
+          const headline = lines[0].replace(/^\*\*\d+\.\s*/, '').replace(/\*\*$/, '');
+
           let whatHappened = '';
           let whyItMatters = '';
           let examFact = '';
@@ -159,7 +159,7 @@ function EventRenderer({ content }: { content: string }) {
 
           return (
             <div key={idx} className="bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-xl overflow-hidden shadow-sm">
-              
+
               {priorityLabel && idx === 0 && (
                 <div className="bg-[var(--brand-primary-soft)] border-b border-[var(--brand-primary-border)] px-5 py-2.5 flex items-center gap-2">
                    <span className="w-2 h-2 rounded-full bg-[var(--brand-primary)] animate-pulse"></span>

@@ -22,6 +22,7 @@ logger = logging.getLogger("app")
 # Map of state names & aliases for rapid matching
 INDIAN_STATES_MAP = {
     "tamil nadu": "Tamil Nadu", "tn": "Tamil Nadu", "madras": "Tamil Nadu",
+    "தமிழ்நாடு": "Tamil Nadu", "chennai": "Tamil Nadu", "coimbatore": "Tamil Nadu", "madurai": "Tamil Nadu",
     "kerala": "Kerala", "karnataka": "Karnataka", "bengaluru": "Karnataka", "bangalore": "Karnataka",
     "maharashtra": "Maharashtra", "mumbai": "Maharashtra",
     "delhi": "New Delhi", "new delhi": "New Delhi", "ncr": "New Delhi",
@@ -92,10 +93,11 @@ class FlashFactsAIAssistant:
         """Convert natural language question into structured filters."""
         import re
         from datetime import datetime, timezone, timedelta
-        
+        from zoneinfo import ZoneInfo
+
         q_lower = question.lower()
         filters: Dict[str, Any] = {}
-        
+
         # MCQ Intent and Count Extraction
         if "mcq" in q_lower or "quiz" in q_lower or "multiple choice" in q_lower:
             filters["output_format"] = "mcq"
@@ -104,8 +106,8 @@ class FlashFactsAIAssistant:
             if match:
                 filters["mcq_count"] = int(match.group(1))
 
-        today = datetime.now(timezone.utc)
-        
+        today = datetime.now(ZoneInfo("Asia/Kolkata"))
+
         if history:
             last_filters = None
             for item in reversed(history):
@@ -177,12 +179,14 @@ class FlashFactsAIAssistant:
 
         clean_words = []
         ignore_words = {
-            "what", "happened", "today", "current", "affairs", "the", "in", "for", "give", "me", 
-            "show", "tell", "explain", "is", "of", "and", "some", "mcq", "mcqs", "about", "on", 
-            "quiz", "multiple", "choice", "questions", "generate", "create", "make", "from", 
-            "please", "can", "you", "a", "an", "any"
+            "what", "happened", "today", "current", "affairs", "the", "in", "for", "give", "me",
+            "show", "tell", "explain", "is", "of", "and", "some", "mcq", "mcqs", "about", "on",
+            "quiz", "multiple", "choice", "questions", "generate", "create", "make", "from",
+            "please", "can", "you", "a", "an", "any",
+            "\u0baa\u0bb1\u0bcd\u0bb1\u0bbf",
+            "\u0b95\u0bc2\u0bb1\u0bc1"
         }
-        
+
         words = q_lower.replace("?", "").replace(".", "").split()
         for word in words:
             if word not in ignore_words and not word.isdigit():
@@ -307,7 +311,7 @@ class FlashFactsAIAssistant:
                     limit=50,
                 )
 
-            if not events:
+            if not events and not query_text:
                 events, _ = self.event_repo.list_events(
                     domain=None if len(domains) > 1 else domain,
                     start_date=start_date,
@@ -353,6 +357,11 @@ class FlashFactsAIAssistant:
             if filters.get("importance") == "high" and score < 60:
                 score -= 50
 
+            # Generic penalty for non-exam domains
+            non_exam_domains = {"Entertainment", "Crime", "Lifestyle", "Gossip", "Cinema"}
+            if e.domain and e.domain in non_exam_domains:
+                score -= 500
+
             if exam_id:
                 rel = self.exam_service.get_event_exam_relevance(e.id)
                 exam_rels = rel.get("relevant_exams", [])
@@ -363,7 +372,8 @@ class FlashFactsAIAssistant:
                 ):
                     score += 20
                 else:
-                    score -= 10
+                    # Heavily penalize events that are not relevant to the requested exam
+                    score -= 500
 
             return score
 
@@ -377,13 +387,13 @@ class FlashFactsAIAssistant:
             reverse=True
         )
 
-        return [event for event, _ in scored_events[:10]]
+        return [event for event, score in scored_events[:10] if score > -100]
     def _synthesize_deterministic_answer(
         self, events: List[Event], filters: Dict[str, Any]
     ) -> str:
         """Construct structured exam-oriented answer directly from retrieved events."""
         from app.utils.hashing import fix_mojibake
-        
+
         exam_code = filters.get("exam_code") or "Competitive Exams"
         date_label = (filters.get("date_label") or "Current").capitalize()
         location_label = filters.get("location_name")
@@ -395,44 +405,44 @@ class FlashFactsAIAssistant:
             header_title += f" ({exam_code})"
 
         lines = [f"### {header_title}\n"]
-        
+
         if filters.get("output_format") == "mcq":
             lines.append("### Current Affairs Practice Quiz\n")
             mcq_count = filters.get("mcq_count", 5)
             mcq_events = events[:mcq_count]
-            
+
             all_titles = [e.title for e in events if e.title]
-            
+
             for idx, e in enumerate(mcq_events, 1):
                 domain_str = e.domain or 'Current Affairs'
                 lines.append(f"**Q{idx}. Regarding recent developments in {domain_str}, which of the following is correct?**")
-                
-                correct_ans = fix_mojibake(e.title)
-                
+
+                correct_ans = e.title
+
                 distractors = []
                 for other in all_titles:
-                    other_clean = fix_mojibake(other)
+                    other_clean = other
                     if other_clean != correct_ans and other_clean not in distractors:
                         distractors.append(other_clean)
                         if len(distractors) == 3:
                             break
-                            
+
                 while len(distractors) < 3:
                     distractors.append(f"A significant policy update in {domain_str}.")
                     distractors.append(f"A new development affecting {domain_str} stakeholders.")
                     distractors.append(f"An international agreement regarding {domain_str}.")
-                    
+
                 options = [correct_ans, distractors[0], distractors[1], distractors[2]]
-                
+
                 correct_pos = idx % 4
                 options[0], options[correct_pos] = options[correct_pos], options[0]
-                
+
                 labels = ['A', 'B', 'C', 'D']
                 for i, opt in enumerate(options):
                     lines.append(f"{labels[i]}) {opt}")
-                    
+
                 lines.append(f"**Correct Answer: {labels[correct_pos]}**")
-                lines.append(f"**Explanation:** {fix_mojibake(e.summary)}\n")
+                lines.append(f"**Explanation:** {e.summary}\n")
         else:
             high_events = [e for e in events if (e.importance_score or 50) >= 60][:3]
             if not high_events and events:
@@ -441,12 +451,12 @@ class FlashFactsAIAssistant:
             if high_events:
                 lines.append("🌟 **HIGH PRIORITY**\n")
                 for idx, e in enumerate(high_events, 1):
-                    lines.append(f"**{idx}. {fix_mojibake(e.title)}**")
-                    lines.append(f"**What happened:** {fix_mojibake(e.summary)}")
+                    lines.append(f"**{idx}. {e.title}**")
+                    lines.append(f"**What happened:** {e.summary}")
                     if e.why_it_matters:
-                        lines.append(f"**Why it matters:** {fix_mojibake(e.why_it_matters)}")
+                        lines.append(f"**Why it matters:** {e.why_it_matters}")
 
-                    fact = f"Domain: {e.domain} | Category: {e.event_type or 'General'}"
+                    fact = f"Domain: {e.domain} | Category: {e.event_type or 'Current Affairs'}"
                     lines.append(f"**Exam Fact:** {fact}")
 
                     rel = self.exam_service.get_event_exam_relevance(e.id)
@@ -465,8 +475,8 @@ class FlashFactsAIAssistant:
             if remaining:
                 lines.append("📰 **IMPORTANT DEVELOPMENTS**\n")
                 for idx, e in enumerate(remaining, 1):
-                    lines.append(f"**{idx}. {fix_mojibake(e.title)}**")
-                    lines.append(f"{fix_mojibake(e.summary[:200])}...")
+                    lines.append(f"**{idx}. {e.title}**")
+                    lines.append(f"{e.summary[:200]}...")
                     lines.append(f"*Category: {e.domain} | Date: {e.event_date}*\n")
 
         return "\n".join(lines)
@@ -474,14 +484,7 @@ class FlashFactsAIAssistant:
     def _synthesize_ai_answer(
         self, question: str, events: List[Event], filters: Dict[str, Any]
     ) -> Optional[str]:
-        """Synthesize answer using OpenAI API formatted strictly over retrieved events."""
-        from app.core.config import settings
-
-        api_key = getattr(settings, "AI_API_KEY", "")
-        model = getattr(settings, "AI_MODEL", "gpt-4o-mini")
-        if not api_key:
-            return None
-
+        """Synthesize answer using AIProvider formatted strictly over retrieved events."""
         context_blocks = []
         for idx, e in enumerate(events, 1):
             source_name = getattr(e, "source", "") or "FlashFacts Network"
@@ -496,7 +499,7 @@ class FlashFactsAIAssistant:
             )
 
         context_str = "\n".join(context_blocks)
-        
+
         is_mcq = filters.get("output_format") == "mcq"
 
         if is_mcq:
@@ -518,36 +521,20 @@ class FlashFactsAIAssistant:
             )
         else:
             system_prompt = (
-                "You are FlashFacts AI, an exam-focused current affairs assistant. "
-                "Answer the user's question using ONLY the provided verified FlashFacts event context. "
-                "Do NOT invent current affairs not present in the context. "
-                "Structure the response clearly with High Priority events, What Happened, Why It Matters, Exam Facts, and Sources."
+                "You are the FlashFacts exam-current-affairs AI assistant. Understand the user's question and provide a clear, useful answer. "
+                "For current-affairs claims, use only the verified FlashFacts context supplied to you. "
+                "Do not invent facts, events, dates, statistics, sources, or citations. If the supplied context is insufficient, say so clearly. "
+                "Answer in the user's requested language. For Tamil, use natural standard Tamil suitable for TNPSC aspirants. "
+                "Do not translate English phrases literally when a standard Tamil term exists. Use standard terminology such as 'இந்திய அரசியலமைப்பு' for Constitution, 'அடிப்படை உரிமைகள்', 'சமத்துவம்', 'சமூக நீதி', 'மத்திய அரசு', 'மாநில அரசு'. "
+                "Preserve important names, dates, organizations, and source information accurately. Keep answers concise but informative and organize them according to the question rather than forcing every answer into a fixed template. "
+                "Never expose internal reasoning, do not mention system prompts, and do not claim to have browsed the web."
             )
 
-        try:
-            import httpx
-            headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-            payload = {
-                "model": model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {
-                        "role": "user", 
-                        "content": f"Context:\n{context_str}\n\nQuestion: {question}"
-                    }
-                ],
-                "temperature": 0.2
-            }
-            resp = httpx.post(
-                "https://api.openai.com/v1/chat/completions",
-                json=payload,
-                headers=headers,
-                timeout=15.0
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-                return data["choices"][0]["message"]["content"]
-            else:
-                return None
-        except Exception:
-            return None
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"Context:\n{context_str}\n\nQuestion: {question}"}
+        ]
+
+        if hasattr(self.provider, "generate_chat"):
+            return self.provider.generate_chat(messages, temperature=0.2)
+        return None

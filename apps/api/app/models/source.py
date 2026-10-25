@@ -12,7 +12,7 @@ class Source(Base):
     url = Column(String(512), nullable=False)
     feed_url = Column(String(512), unique=True, nullable=False, index=True)
     source_type = Column(String(50), nullable=False, default="rss")
-    domain = Column(String(100), nullable=False, default="General", index=True)
+    domain = Column(String(100), nullable=False, default="Technology", index=True)
     reliability_score = Column(Float, nullable=False, default=1.0)
     enabled = Column(Boolean, nullable=False, default=True, index=True)
     last_ingested_at = Column(DateTime(timezone=True), nullable=True)

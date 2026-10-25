@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     APP_ENV: str = "development"
 
+    # OAuth / Dual Authentication
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+
     # Database
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/flashfacts"
 
@@ -25,6 +29,10 @@ class Settings(BaseSettings):
     AI_API_KEY: str = ""
     AI_MODEL: str = "gpt-4o-mini"
     AI_MAX_INPUT_CHARS: int = 6000
+
+    # Ollama Integration
+    OLLAMA_BASE_URL: str = "http://host.docker.internal:11434"
+    OLLAMA_TIMEOUT: int = 120
 
     # Ingestion
     INGESTION_ENABLED: bool = False

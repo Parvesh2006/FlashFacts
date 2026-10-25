@@ -17,7 +17,7 @@ def test_source(db_session):
         url="https://thehindu.com",
         feed_url="https://thehindu.com/feeder",
         source_type="rss",
-        domain="General",
+        domain="Government",
         reliability_score=1.0,
         enabled=True,
     )

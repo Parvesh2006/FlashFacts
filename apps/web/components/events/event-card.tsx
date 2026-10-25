@@ -26,7 +26,7 @@ export function EventCard({ event, compact = false }: EventCardProps) {
       <div>
           <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center justify-between gap-2 mb-3">
-          <DomainBadge domain={event.domain || "General"} />
+          <DomainBadge domain={event.domain || "Technology"} />
           <div className="flex items-center gap-1.5 meta-text">
             <Calendar className="w-3.5 h-3.5 accent-mark" />
             <span>{formatDate(event.event_date)}</span>

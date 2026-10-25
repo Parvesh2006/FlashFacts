@@ -46,7 +46,7 @@ env/
 pip-wheel-metadata/
 
 # ==========================================
-# Database - DON'T commit local databases
+# Local databases
 # ==========================================
 *.db
 *.sqlite
@@ -77,7 +77,27 @@ Thumbs.db
 # TypeScript
 # ==========================================
 *.tsbuildinfo
+
 # ==========================================
 # Experiment / generated data
 # ==========================================
 tools/data/experiments/
+
+# ==========================================
+# Temporary backups
+# ==========================================
+*.bak
+*.bak_*
+*.backup
+*.backup-*
+*.before_*
+backups/
+scratch/
+
+# ==========================================
+# Generated runtime files
+# ==========================================
+openapi_runtime.json
+
+# Temporarily exclude unverified PYQ PDFs
+data/pyq_pdfs/*.pdf

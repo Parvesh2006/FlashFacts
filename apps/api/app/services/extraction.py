@@ -5,6 +5,7 @@ from typing import Dict, Any
 from app.models.document import Document
 from app.models.source import Source
 from app.services.classification import BaseClassifier, KeywordDomainClassifier
+from app.utils.hashing import fix_mojibake
 
 
 class EventExtractorService:
@@ -14,6 +15,8 @@ class EventExtractorService:
     def clean_text(self, text: str) -> str:
         if not text:
             return ""
+        # Repair common UTF-8 mojibake before HTML entity decoding.
+        text = fix_mojibake(text)
         # Unescape HTML entities
         text = html.unescape(text)
         # Strip HTML tags

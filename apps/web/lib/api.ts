@@ -18,9 +18,13 @@ export async function fetchApi<T>(
 ): Promise<T> {
   const url = `${BASE_URL}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
 
-  const headers = {
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("flashfacts_auth_token") : null;
+
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...options.headers,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options.headers as Record<string, string>),
   };
 
   try {
@@ -43,6 +47,10 @@ export async function fetchApi<T>(
           : `HTTP Error ${res.status}: ${res.statusText}`;
 
       throw new ApiError(message, res.status, errorData);
+    }
+
+    if (res.status === 204) {
+      return {} as T;
     }
 
     return (await res.json()) as T;
@@ -77,6 +85,26 @@ export const api = {
     return fetchApi<T>(endpoint, {
       method: "POST",
       body: body ? JSON.stringify(body) : undefined,
+    });
+  },
+
+  put: <T>(endpoint: string, body?: unknown) => {
+    return fetchApi<T>(endpoint, {
+      method: "PUT",
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  },
+
+  patch: <T>(endpoint: string, body?: unknown) => {
+    return fetchApi<T>(endpoint, {
+      method: "PATCH",
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  },
+
+  delete: <T>(endpoint: string) => {
+    return fetchApi<T>(endpoint, {
+      method: "DELETE",
     });
   },
 };

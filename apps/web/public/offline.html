@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>FlashFacts Fact Jumper — Offline Fast Runner</title>
+  <style>
+    :root {
+      --bg: #F8FAFC;
+      --surface: #FFFFFF;
+      --surface-muted: #F1F5F9;
+      --border: #CBD5E1;
+      --text: #0F172A;
+      --text-muted: #64748B;
+      --brand: #2563EB;
+      --brand-hover: #1D4ED8;
+      --success: #10B981;
+      --accent-gold: #D97706;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #090D16;
+        --surface: #131B2E;
+        --surface-muted: #1E293B;
+        --border: #334155;
+        --text: #F8FAFC;
+        --text-muted: #94A3B8;
+        --brand: #3B82F6;
+        --brand-hover: #60A5FA;
+        --success: #34D399;
+        --accent-gold: #F59E0B;
+      }
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 16px;
+      overflow-x: hidden;
+    }
+    .header-bar {
+      width: 100%;
+      max-width: 900px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      background: rgba(16, 185, 129, 0.12);
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      font-weight: 600;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+    #onlineBanner {
+      display: none;
+      width: 100%;
+      max-width: 900px;
+      background: #10B981;
+      color: #FFFFFF;
+      padding: 12px 20px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      animation: slideDown 0.3s ease-out;
+    }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-return {
+      background: #FFFFFF;
+      color: #065F46;
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-return:hover {
+      background: #F0FDF4;
+    }
+    .game-card {
+      width: 100%;
+      max-width: 900px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+      position: relative;
+    }
+    .stats-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.85rem;
+    }
+    .score-group {
+      display: flex;
+      gap: 16px;
+    }
+    .score-item strong {
+      font-size: 1.1rem;
+      color: var(--brand);
+    }
+    .canvas-container {
+      position: relative;
+      width: 100%;
+      background: #F8FAFC;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      touch-action: none;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 280px;
+    }
+    .milestone-banner {
+      margin-top: 12px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: var(--surface-muted);
+      border-left: 4px solid var(--accent-gold);
+      font-size: 0.8rem;
+      line-height: 1.4;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 44px;
+    }
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    .action-btn {
+      background: var(--surface-muted);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    .action-btn:hover {
+      background: var(--border);
+    }
+    .btn-touch {
+      flex: 1;
+      padding: 14px;
+      font-size: 0.95rem;
+      text-align: center;
+      justify-content: center;
+    }
+    .instructions {
+      margin-top: 16px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      text-align: center;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Online Restored Banner (Scenario 5) -->
+  <div id="onlineBanner">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="font-size: 1.2rem;">🌐</span>
+      <span><strong>Internet Restored!</strong> FlashFacts online services are reachable again.</span>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button class="btn-return" onclick="window.location.href='/'">Return to FlashFacts</button>
+      <button class="btn-return" style="background: rgba(0,0,0,0.15); color: #fff;" onclick="dismissOnlineBanner()">Keep Playing</button>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <div class="header-bar">
+    <div class="brand-title">
+      <span>⚡ FlashFacts</span>
+      <span style="font-weight: 400; color: var(--text-muted); font-size: 0.9rem;">/ Fact Jumper</span>
+    </div>
+    <div class="status-badge" id="offlineBadge">
+      <span class="status-dot"></span>
+      <span id="badgeText">Offline Fast Runner</span>
+    </div>
+  </div>
+
+  <!-- Game Card -->
+  <div class="game-card">
+    <div class="stats-row">
+      <div class="score-group">
+        <span class="score-item">SCORE: <strong id="scoreVal">0</strong></span>
+        <span class="score-item">BEST: <strong id="highScoreVal" style="color: var(--accent-gold);">0</strong></span>
+      </div>
+      <div>
+        <span id="speedIndicator" style="color: var(--text-muted);">SPEED: 1.0x</span>
+      </div>
+    </div>
+
+    <!-- Canvas -->
+    <div class="canvas-container" id="canvasContainer">
+      <canvas id="gameCanvas" width="900" height="280"></canvas>
+    </div>
+
+    <!-- Milestone Fact Display -->
+    <div class="milestone-banner" id="milestoneBanner">
+      <span style="font-size: 1.1rem;">💡</span>
+      <span id="milestoneFact">Milestone exam fact: Reach 100 points to unlock high-yield competitive exam facts!</span>
+    </div>
+
+    <!-- Touch / Keyboard Controls -->
+    <div class="controls-row">
+      <div style="display: flex; gap: 8px; flex: 1;">
+        <button class="action-btn btn-touch" id="jumpBtn" style="background: var(--brand); color: #fff; border-color: var(--brand);">▲ JUMP (Space / Tap)</button>
+        <button class="action-btn btn-touch" id="duckBtn">▼ DUCK (Down / Drag)</button>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button class="action-btn" id="soundBtn" onclick="toggleSound()">🔊 Sound: ON</button>
+        <button class="action-btn" id="restartBtn" onclick="startGame()">↻ Restart</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="instructions">
+    Jump over ground hurdles & books (Space / ↑) · Duck under overhead drones & banners (↓) · Progressive Speed · Local Persistence
+  </div>
+
+  <script>
+    // --- 1. Sound Synthesis (Web Audio API - 100% Offline) ---
+    let soundEnabled = true;
+    let audioCtx = null;
+    function playTone(type) {
+      if (!soundEnabled) return;
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!audioCtx) audioCtx = new AudioContextClass();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (type === 'jump') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(320, now);
+          osc.frequency.exponentialRampToValueAtTime(640, now + 0.08);
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+          osc.start(now);
+          osc.stop(now + 0.08);
+        } else if (type === 'duck') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(240, now);
+          osc.frequency.exponentialRampToValueAtTime(140, now + 0.08);
+          gain.gain.setValueAtTime(0.08, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+          osc.start(now);
+          osc.stop(now + 0.08);
+        } else if (type === 'milestone') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(523.25, now);
+          osc.frequency.setValueAtTime(659.25, now + 0.08);
+          osc.frequency.setValueAtTime(783.99, now + 0.16);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+          osc.start(now);
+          osc.stop(now + 0.3);
+        } else if (type === 'crash') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(160, now);
+          osc.frequency.exponentialRampToValueAtTime(50, now + 0.18);
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.18);
+          osc.start(now);
+          osc.stop(now + 0.18);
+        }
+      } catch (e) {}
+    }
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      document.getElementById('soundBtn').textContent = soundEnabled ? '🔊 Sound: ON' : '🔇 Sound: OFF';
+    }
+
+    // --- 2. High-Yield Milestone Exam Facts ---
+    const EXAM_FACTS = [
+      "The Preamble was amended only once — by the 42nd Amendment Act in 1976.",
+      "Keezhadi excavations near Madurai prove an urban civilization on the Vaigai river banks dating to the 6th century BCE.",
+      "Article 32 was termed the 'Heart and Soul of the Constitution' by Dr. B.R. Ambedkar.",
+      "India's first satellite, Aryabhata, was launched on 19 April 1975.",
+      "The Kudavolai electoral system was practiced by the Cholas as recorded in the Uttaramerur inscriptions.",
+      "The Western Ghats is one of the world's eight 'hottest hotspots' of biological diversity.",
+      "The Swadeshi Steam Navigation Company was established by V.O. Chidambaram Pillai at Tuticorin in 1906.",
+      "Project Tiger was launched by the Government of India in April 1973 from Corbett National Park.",
+      "The Right to Education became a Fundamental Right via the 86th Constitutional Amendment Act, 2002 (Article 21A).",
+      "The Reserve Bank of India was established on April 1, 1935 under the Reserve Bank of India Act, 1934.",
+      "Article 17 of the Constitution of India abolishes 'Untouchability' and forbids its practice.",
+      "The 73rd Constitutional Amendment Act, 1992 inserted Part IX and the 11th Schedule for Panchayati Raj.",
+      "ISRO was founded on August 15, 1969 under the visionary leadership of Dr. Vikram Sarabhai.",
+      "The Comptroller and Auditor General (CAG) of India is appointed under Article 148 of the Constitution.",
+      "Maneka Gandhi v. Union of India (1978) established that procedure under Article 21 must be just, fair and reasonable."
+    ];
+
+    // --- 3. Stickman Runner Game Logic ---
+    const STORAGE_KEY_HIGH_SCORE = "flashfacts_fact_jumper_highscore";
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreVal = document.getElementById('scoreVal');
+    const highScoreVal = document.getElementById('highScoreVal');
+    const speedIndicator = document.getElementById('speedIndicator');
+    const milestoneFact = document.getElementById('milestoneFact');
+
+    let highScore = 0;
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_HIGH_SCORE);
+      if (stored) highScore = parseInt(stored, 10) || 0;
+    } catch (e) {}
+    highScoreVal.textContent = highScore;
+
+    let score = 0;
+    let gameState = "RUNNING"; // Automatically runs on load!
+    let speed = 6.5;
+    const INITIAL_SPEED = 6.5;
+    const MAX_SPEED = 12.5;
+    let distance = 0;
+    let lastFactMilestone = 0;
+
+    const groundY = 240;
+    const player = {
+      x: 80,
+      y: groundY,
+      width: 24,
+      height: 52,
+      vy: 0,
+      isGrounded: true,
+      isDucking: false,
+      runFrame: 0
+    };
+
+    let obstacles = [];
+    let particles = [];
+    let nextSpawnDistance = 280;
+    let animFrame = null;
+    let lastTime = performance.now();
+
+    function startGame() {
+      score = 0;
+      speed = INITIAL_SPEED;
+      distance = 0;
+      lastFactMilestone = 0;
+      obstacles = [];
+      particles = [];
+      nextSpawnDistance = 280;
+      player.y = groundY;
+      player.vy = 0;
+      player.isGrounded = true;
+      player.isDucking = false;
+      gameState = "RUNNING";
+      scoreVal.textContent = '0';
+      speedIndicator.textContent = 'SPEED: 1.0x';
+      lastTime = performance.now();
+    }
+
+    function triggerJump() {
+      if (gameState === "GAMEOVER") {
+        startGame();
+        return;
+      }
+      if (player.isGrounded && !player.isDucking) {
+        player.vy = -13.2;
+        player.isGrounded = false;
+        playTone('jump');
+        for (let i = 0; i < 5; i++) {
+          particles.push({
+            x: player.x + 8,
+            y: player.y,
+            vx: -(Math.random() * 2 + 1),
+            vy: -(Math.random() * 2),
+            alpha: 0.7,
+            size: Math.random() * 3 + 2,
+            color: '#94A3B8'
+          });
+        }
+      }
+    }
+
+    function setDuck(ducking) {
+      if (!player.isGrounded) return;
+      if (ducking && !player.isDucking) playTone('duck');
+      player.isDucking = ducking;
+    }
+
+    // Keyboard controls
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' || e.code === 'ArrowUp') {
+        e.preventDefault();
+        triggerJump();
+      } else if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+        e.preventDefault();
+        setDuck(true);
+      }
+    });
+    window.addEventListener('keyup', (e) => {
+      if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+        setDuck(false);
+      }
+    });
+
+    // Touch / Button listeners
+    document.getElementById('jumpBtn').addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      triggerJump();
+    });
+    const duckBtn = document.getElementById('duckBtn');
+    duckBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      setDuck(true);
+    });
+    duckBtn.addEventListener('pointerup', () => setDuck(false));
+    duckBtn.addEventListener('pointercancel', () => setDuck(false));
+
+    canvas.addEventListener('pointerdown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const clickY = e.clientY - rect.top;
+      if (clickY > rect.height * 0.65) {
+        setDuck(true);
+      } else {
+        triggerJump();
+      }
+    });
+    canvas.addEventListener('pointerup', () => setDuck(false));
+    canvas.addEventListener('pointercancel', () => setDuck(false));
+
+    // Stickman Drawing
+    function drawStickman(p) {
+      ctx.save();
+      ctx.strokeStyle = '#0F172A';
+      ctx.fillStyle = '#0F172A';
+      ctx.lineWidth = 3.2;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      if (p.isDucking && p.isGrounded) {
+        // Ducking pose
+        const headX = p.x + 22;
+        const headY = p.y - 17;
+        ctx.beginPath();
+        ctx.arc(headX, headY, 6.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(p.x + 15, p.y - 14);
+        ctx.lineTo(p.x - 6, p.y - 9);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(p.x - 6, p.y - 9);
+        ctx.lineTo(p.x + 16, p.y - 4);
+        ctx.lineTo(p.x + 30, p.y - 1);
+        ctx.stroke();
+      } else {
+        // Upright running / jumping
+        const headY = p.y - 45;
+        const hipY = p.y - 20;
+
+        // Head
+        ctx.beginPath();
+        ctx.arc(p.x + 6, headY, 7, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Spine
+        ctx.beginPath();
+        ctx.moveTo(p.x + 6, headY + 7);
+        ctx.lineTo(p.x + 4, hipY);
+        ctx.stroke();
+
+        // Legs
+        if (p.isGrounded) {
+          const legPhase = (distance * 0.08) % (Math.PI * 2);
+          const leg1Angle = Math.sin(legPhase) * 0.65;
+          const leg2Angle = Math.sin(legPhase + Math.PI) * 0.65;
+
+          ctx.beginPath();
+          ctx.moveTo(p.x + 4, hipY);
+          ctx.lineTo(p.x + 4 + Math.sin(leg1Angle) * 16, p.y);
+          ctx.moveTo(p.x + 4, hipY);
+          ctx.lineTo(p.x + 4 + Math.sin(leg2Angle) * 16, p.y);
+          ctx.stroke();
+
+          // Arms
+          ctx.beginPath();
+          ctx.moveTo(p.x + 5, headY + 12);
+          ctx.lineTo(p.x + 5 - Math.sin(leg1Angle) * 12, headY + 22);
+          ctx.moveTo(p.x + 5, headY + 12);
+          ctx.lineTo(p.x + 5 - Math.sin(leg2Angle) * 12, headY + 22);
+          ctx.stroke();
+        } else {
+          // Jump pose
+          ctx.beginPath();
+          ctx.moveTo(p.x + 4, hipY);
+          ctx.lineTo(p.x + 14, p.y - 6);
+          ctx.moveTo(p.x + 4, hipY);
+          ctx.lineTo(p.x - 6, p.y - 10);
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.moveTo(p.x + 5, headY + 12);
+          ctx.lineTo(p.x + 18, headY + 2);
+          ctx.moveTo(p.x + 5, headY + 12);
+          ctx.lineTo(p.x - 8, headY + 5);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+
+    // Main Game Loop (60 FPS)
+    function gameLoop(timestamp) {
+      const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+      lastTime = timestamp;
+
+      // Update
+      if (gameState === "RUNNING") {
+        speed = Math.min(MAX_SPEED, INITIAL_SPEED + score * 0.0055);
+        distance += speed;
+        score = Math.floor(distance / 10);
+        scoreVal.textContent = score;
+        speedIndicator.textContent = `SPEED: ${(speed / INITIAL_SPEED).toFixed(1)}x`;
+
+        // Milestone Fact Trigger
+        const currentMilestone = Math.floor(score / 100);
+        if (currentMilestone > lastFactMilestone && currentMilestone <= EXAM_FACTS.length) {
+          lastFactMilestone = currentMilestone;
+          const factIndex = (currentMilestone - 1) % EXAM_FACTS.length;
+          milestoneFact.textContent = `Milestone Fact #${currentMilestone * 100}: ${EXAM_FACTS[factIndex]}`;
+          playTone('milestone');
+        }
+
+        // High Score
+        if (score > highScore) {
+          highScore = score;
+          highScoreVal.textContent = highScore;
+          try {
+            localStorage.setItem(STORAGE_KEY_HIGH_SCORE, highScore.toString());
+          } catch (e) {}
+        }
+
+        // Player physics
+        if (!player.isGrounded) {
+          player.vy += 28 * dt; // Gravity
+          player.y += player.vy;
+          if (player.y >= groundY) {
+            player.y = groundY;
+            player.vy = 0;
+            player.isGrounded = true;
+          }
+        }
+
+        // Spawn obstacles
+        if (distance >= nextSpawnDistance) {
+          const types = ["ground_hurdle", "ground_books", "overhead_drone", "overhead_banner"];
+          const type = types[Math.floor(Math.random() * types.length)];
+          let obsW = 24, obsH = 34, obsY = groundY - 34;
+
+          if (type === "overhead_drone" || type === "overhead_banner") {
+            obsW = 32;
+            obsH = 20;
+            obsY = groundY - 58; // Overhead obstacle requires ducking
+          } else if (type === "ground_books") {
+            obsW = 28;
+            obsH = 26;
+            obsY = groundY - 26;
+          }
+
+          obstacles.push({
+            x: canvas.width + 20,
+            y: obsY,
+            width: obsW,
+            height: obsH,
+            type: type
+          });
+
+          // Next interval
+          nextSpawnDistance = distance + Math.random() * 220 + 260;
+        }
+
+        // Update obstacles & check collisions
+        const pBox = {
+          x: player.x,
+          y: player.isDucking ? player.y - 20 : player.y - 50,
+          w: player.isDucking ? 30 : 20,
+          h: player.isDucking ? 20 : 50
+        };
+
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+          const obs = obstacles[i];
+          obs.x -= speed;
+
+          // AABB collision detection
+          if (
+            pBox.x < obs.x + obs.width &&
+            pBox.x + pBox.w > obs.x &&
+            pBox.y < obs.y + obs.height &&
+            pBox.y + pBox.h > obs.y
+          ) {
+            gameState = "GAMEOVER";
+            playTone('crash');
+            break;
+          }
+
+          if (obs.x + obs.width < -50) {
+            obstacles.splice(i, 1);
+          }
+        }
+      }
+
+      // Render
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Ground Line
+      ctx.strokeStyle = '#94A3B8';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, groundY);
+      ctx.lineTo(canvas.width, groundY);
+      ctx.stroke();
+
+      // Moving ground ticks
+      const tickOffset = -(distance % 24);
+      ctx.strokeStyle = '#CBD5E1';
+      ctx.lineWidth = 1;
+      for (let x = tickOffset; x < canvas.width; x += 24) {
+        ctx.beginPath();
+        ctx.moveTo(x, groundY);
+        ctx.lineTo(x + 8, groundY + 8);
+        ctx.stroke();
+      }
+
+      // Draw obstacles
+      for (const obs of obstacles) {
+        ctx.fillStyle = obs.type.startsWith('overhead') ? '#DC2626' : '#2563EB';
+        ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+        ctx.strokeStyle = '#0F172A';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(obs.x, obs.y, obs.width, obs.height);
+      }
+
+      // Draw stickman
+      drawStickman(player);
+
+      // Draw particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const pt = particles[i];
+        pt.x += pt.vx;
+        pt.y += pt.vy;
+        pt.alpha -= 0.03;
+        if (pt.alpha <= 0) {
+          particles.splice(i, 1);
+          continue;
+        }
+        ctx.fillStyle = `rgba(148, 163, 184, ${pt.alpha})`;
+        ctx.fillRect(pt.x, pt.y, pt.size, pt.size);
+      }
+
+      // Game Over overlay
+      if (gameState === "GAMEOVER") {
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.65)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 28px ui-monospace, Menlo, monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('CRASH! GAME OVER', canvas.width / 2, canvas.height / 2 - 10);
+
+        ctx.font = '16px -apple-system, sans-serif';
+        ctx.fillText('Press Space, Tap, or click Restart to Run Again', canvas.width / 2, canvas.height / 2 + 25);
+      }
+
+      animFrame = requestAnimationFrame(gameLoop);
+    }
+
+    // Start immediately
+    animFrame = requestAnimationFrame(gameLoop);
+
+    // --- 4. Connectivity Detection (Scenario 5) ---
+    function checkConnectivity() {
+      if (navigator.onLine) {
+        document.getElementById('onlineBanner').style.display = 'flex';
+      }
+    }
+    window.addEventListener('online', checkConnectivity);
+    window.addEventListener('offline', () => {
+      document.getElementById('onlineBanner').style.display = 'none';
+    });
+    if (navigator.onLine) {
+      // If opened directly while online, offer link to return
+      document.getElementById('onlineBanner').style.display = 'flex';
+    }
+
+    function dismissOnlineBanner() {
+      document.getElementById('onlineBanner').style.display = 'none';
+    }
+  </script>
+</body>
+</html>

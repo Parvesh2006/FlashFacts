@@ -62,7 +62,7 @@ REFERENCE_LOCATIONS = [
         "country_code": "IN",
         "state_code": "TN",
         "parent": "India",
-        "aliases": ["TN", "Madras State", "Tamil Nadu Government", "TN Govt"],
+        "aliases": ["TN", "Madras State", "Tamil Nadu Government", "TN Govt", "?????????", "???????", "?????"],
     },
     {"name": "Telangana", "normalized_name": "telangana", "location_type": "STATE", "country_code": "IN", "state_code": "TG", "parent": "India", "aliases": ["TG"]},
     {"name": "Tripura", "normalized_name": "tripura", "location_type": "STATE", "country_code": "IN", "state_code": "TR", "parent": "India", "aliases": ["TR"]},

@@ -244,7 +244,7 @@ export default function ExamsPage() {
                   <div key={item.event.id} className="editorial-card editorial-card-hover p-5 flex flex-col justify-between space-y-4">
                     <div className="space-y-2">
                       <div className="flex items-center justify-between gap-2">
-                        <DomainBadge domain={item.event.domain || "General"} className="text-[10px]" />
+                        <DomainBadge domain={item.event.domain || "Technology"} className="text-[10px]" />
                         <span className="status-success text-xs font-mono px-2 py-0.5 rounded">
                           {item.relevance_score}% Relevance
                         </span>

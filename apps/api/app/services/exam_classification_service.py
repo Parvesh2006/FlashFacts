@@ -103,9 +103,9 @@ class ExamClassificationService:
         Classify an event into structured Exam Intelligence parameters
         and persist EventExamMetadata & EventExamRelevance records.
         """
-        title = fix_mojibake(event.title or "")
-        summary = fix_mojibake(event.summary or "")
-        domain = event.domain or "General"
+        title = event.title or ""
+        summary = event.summary or ""
+        domain = event.domain or "Technology"
         event_type = event.event_type or "event"
         imp_score = event.importance_score or 50
 
@@ -115,7 +115,7 @@ class ExamClassificationService:
         geo_level, primary_state = self._determine_geography(combined_text)
 
         # 2. Exam Importance Classification
-        exam_importance = self._determine_exam_importance(imp_score, combined_text, event_type)
+        exam_importance = self._determine_exam_importance(imp_score, combined_text, event_type, domain=domain)
 
         # 3. Why It Matters
         why_it_matters = event.why_it_matters or self._generate_why_it_matters(
@@ -152,7 +152,7 @@ class ExamClassificationService:
         meta.exam_importance = exam_importance
         meta.geographic_level = geo_level
         meta.primary_state = primary_state
-        meta.why_it_matters = fix_mojibake(why_it_matters)
+        meta.why_it_matters = why_it_matters
         meta.exam_facts = exam_facts
         meta.question_angles = question_angles
         meta.relevance_factors = relevance_factors
@@ -220,8 +220,18 @@ class ExamClassificationService:
     # ── Importance ────────────────────────────────────────────────────────────
 
     def _determine_exam_importance(
-        self, imp_score: int, text_lower: str, event_type: str
+        self, imp_score: int, text_lower: str, event_type: str, domain: str = ""
     ) -> str:
+        if domain == "Crime":
+            landmark_legal_words = [
+                "supreme court", "high court", "constitution bench", "constitutional bench",
+                "landmark judgment", "law commission", "criminal law reform",
+                "bharatiya nyaya sanhita", "bns", "ipc amendment",
+                "உச்ச நீதிமன்றம்", "உயர் நீதிமன்றம்", "அரசியலமைப்பு", "நீதிபதிகள் அமர்வு",
+                "வரலாற்று சிறப்புமிக்க தீர்ப்பு", "சட்டத்திருத்தம்", "சட்ட திருத்தம்"
+            ]
+            if not any(w in text_lower for w in landmark_legal_words):
+                return "BACKGROUND"
         """Map score + signals → MUST_KNOW | IMPORTANT | USEFUL | BACKGROUND."""
         high_signal_words = [
             "rbi", "budget", "isro", "constitution", "supreme court", "launch",
@@ -349,6 +359,18 @@ class ExamClassificationService:
         imp_score: int,
     ) -> Tuple[int, str, str]:
         """Return (score 0-100, level string, explanation string)."""
+        if domain == "Crime":
+            landmark_legal_words = [
+                "supreme court", "high court", "constitution bench", "constitutional bench",
+                "landmark judgment", "law commission", "criminal law reform",
+                "bharatiya nyaya sanhita", "bns", "ipc amendment",
+                "உச்ச நீதிமன்றம்", "உயர் நீதிமன்றம்", "அரசியலமைப்பு", "நீதிபதிகள் அமர்வு",
+                "வரலாற்று சிறப்புமிக்க தீர்ப்பு", "சட்டத்திருத்தம்", "சட்ட திருத்தம்"
+            ]
+            has_landmark_legal = any(w in text_lower for w in landmark_legal_words)
+            if not has_landmark_legal:
+                return 10, "NOT_RELEVANT", f"Routine local incident/crime without broader {exam_type} competitive exam or syllabus applicability."
+
         score = 40  # baseline
 
         if exam_type == "TNPSC":

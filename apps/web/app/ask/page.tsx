@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { MessageSquareText, Send, Sparkles, AlertCircle, Bot, User, ArrowUp } from "lucide-react";
+import { Sparkles, Bot, User, ArrowUp } from "lucide-react";
 import { askQuestion, AskResponse } from "@/services/ask";
 import { BackButton } from "@/components/navigation/back-button";
 import { MarkdownRenderer } from "./MarkdownRenderer";
@@ -97,7 +97,7 @@ export default function AskPage() {
                 </h1>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--surface-muted)] border border-[var(--surface-border)] hidden sm:flex">
               <span className="w-2 h-2 rounded-full bg-[var(--brand-primary)] animate-pulse"></span>
               <span className="text-xs font-medium text-[var(--text-secondary)]">FlashFacts AI · Online</span>
@@ -109,7 +109,7 @@ export default function AskPage() {
       {/* Main Conversation Area */}
       <div className="flex-1 overflow-y-auto px-4 md:px-8 py-8" aria-live="polite">
         <div className="max-w-[1100px] mx-auto space-y-8 pb-12">
-          
+
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center min-h-[40vh] text-center space-y-8 animate-in fade-in zoom-in duration-500">
               <div className="w-16 h-16 rounded-2xl bg-[var(--brand-primary-soft)] flex items-center justify-center mb-2">
@@ -180,7 +180,7 @@ export default function AskPage() {
               </div>
             </div>
           )}
-          
+
           <div ref={bottomRef} className="h-4"></div>
         </div>
       </div>

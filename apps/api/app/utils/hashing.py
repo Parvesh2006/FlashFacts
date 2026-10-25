@@ -33,12 +33,12 @@ def fix_mojibake(text: str) -> str:
 
 
 def normalize_text(text: str) -> str:
-    """Lowercase text and strip punctuation/extra whitespace."""
+    """Lowercase text and strip punctuation/extra whitespace while preserving Indic combining characters."""
     if not text:
         return ""
     text = fix_mojibake(text)
     text = text.lower()
-    text = re.sub(r"[^\w\s]", "", text)
+    text = re.sub(r"[^\w\s\u0300-\u036f\u0900-\u0d7f]", "", text)
     text = re.sub(r"\s+", " ", text).strip()
     return text
 

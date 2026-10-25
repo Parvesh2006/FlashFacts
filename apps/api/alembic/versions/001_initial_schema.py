@@ -24,7 +24,7 @@ def upgrade() -> None:
         sa.Column('url', sa.String(length=512), nullable=False),
         sa.Column('feed_url', sa.String(length=512), nullable=False),
         sa.Column('source_type', sa.String(length=50), nullable=False, server_default='rss'),
-        sa.Column('domain', sa.String(length=100), nullable=False, server_default='General'),
+        sa.Column('domain', sa.String(length=100), nullable=False, server_default='Technology'),
         sa.Column('reliability_score', sa.Float(), nullable=False, server_default='1.0'),
         sa.Column('enabled', sa.Boolean(), nullable=False, server_default='true'),
         sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),

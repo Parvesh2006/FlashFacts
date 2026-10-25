@@ -103,7 +103,7 @@ export function EventDetailView({ event, relatedEvents = [] }: EventDetailViewPr
       <article className="editorial-card p-6 md:p-8 space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4">
           <div className="flex flex-wrap items-center gap-3">
-            <DomainBadge domain={event.domain || "General"} className="text-xs py-1 px-3" />
+            <DomainBadge domain={event.domain || "Technology"} className="text-xs py-1 px-3" />
 
             {locationData && locationData.locations.length > 0 && (
               <div className="flex items-center gap-1.5 font-mono text-xs text-[var(--brand-primary)] bg-[var(--brand-primary-soft)] px-2.5 py-1 rounded-md border border-[var(--brand-primary-border)]">

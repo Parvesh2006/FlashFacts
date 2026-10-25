@@ -118,6 +118,25 @@ class ExamIntelligenceService:
         reasons: List[str] = []
         text = f"{event.title} {event.summary or ''}".lower()
 
+        # Non-exam domains (e.g. routine crime) have no exam relevance unless landmark legal/constitutional
+        if event.domain in ("Crime", "Entertainment", "Lifestyle", "Gossip", "Cinema"):
+            landmark_legal_words = [
+                "supreme court", "high court", "constitution bench", "constitutional bench",
+                "landmark judgment", "law commission", "criminal law reform",
+                "bharatiya nyaya sanhita", "bns", "ipc amendment",
+                "உச்ச நீதிமன்றம்", "உயர் நீதிமன்றம்", "அரசியலமைப்பு", "நீதிபதிகள் அமர்வு",
+                "வரலாற்று சிறப்புமிக்க தீர்ப்பு", "சட்டத்திருத்தம்", "சட்ட திருத்தம்"
+            ]
+            if not any(w in text for w in landmark_legal_words):
+                return {
+                    "exam_id": exam_def["id"],
+                    "exam_name": exam_def["name"],
+                    "exam_code": exam_def["code"],
+                    "relevance_score": 10,
+                    "section": exam_def["section_label"],
+                    "reasons": [f"Routine {event.domain.lower()} report without direct syllabus relevance"],
+                }
+
         # Domain match
         if event.domain in exam_def["domains"]:
             score += 40
@@ -288,63 +307,80 @@ class ExamIntelligenceService:
     def _generate_ai_mcqs(
         self, event: Event, exam_id: Optional[str], count: int
     ) -> Optional[List[Dict[str, Any]]]:
-        """Use AI provider to generate MCQs grounded in event content."""
-        from app.core.config import settings
+        """Generate source-grounded exam MCQs using the configured AI provider."""
+        content = (
+            f"Title: {event.title or ''}\\n"
+            f"Domain: {event.domain or ''}\\n"
+            f"Summary: {event.summary or ''}"
+        )
 
-        content = f"Title: {event.title}\nDomain: {event.domain}\nSummary: {event.summary or ''}"
         if event.why_it_matters:
-            content += f"\nWhy it matters: {event.why_it_matters}"
+            content += f"\\nWhy it matters: {event.why_it_matters}"
 
         entities = []
         if hasattr(event, "event_entities") and event.event_entities:
-            entities = [f"{ee.entity.name} ({ee.entity.entity_type})" for ee in event.event_entities if ee.entity]
-
+            entities = [
+                f"{ee.entity.name} ({ee.entity.entity_type})"
+                for ee in event.event_entities
+                if ee.entity
+            ]
         if entities:
-            content += f"\nKey entities: {', '.join(entities[:8])}"
+            content += f"\\nKey entities: {', '.join(entities[:8])}"
 
-        exam_context = ""
+        exam_context = "competitive examination"
         if exam_id and exam_id in EXAM_DEFINITIONS:
-            exam_context = f" for {EXAM_DEFINITIONS[exam_id]['name']} ({EXAM_DEFINITIONS[exam_id]['section_label']})"
+            exam_context = EXAM_DEFINITIONS[exam_id]["name"]
 
         system_prompt = (
-            f"You are an expert MCQ generator for competitive exam preparation{exam_context}. "
-            f"Generate exactly {count} multiple-choice questions based ONLY on the provided event information. "
-            "Each question must have exactly 4 options (A, B, C, D), one correct answer, and a brief explanation. "
-            "Do NOT invent facts not present in the source. "
-            "Return valid JSON: {\"mcqs\": [{\"question\": \"...\", \"options\": [\"A. ...\", \"B. ...\", \"C. ...\", \"D. ...\"], "
-            "\"correct_answer\": \"A\", \"explanation\": \"...\"}]}"
+            f"You create high-quality current-affairs MCQs for {exam_context}. "
+            f"Create at most {count} questions using ONLY facts explicitly supported "
+            "by the supplied event. Prioritize factual general knowledge, important "
+            "institutions, schemes, places, people, dates, and stated outcomes when "
+            "the source contains those facts. Do not ask which domain the event belongs "
+            "to, do not ask merely what type of event it is, and do not make a question "
+            "whose only answer is the article title. Do not invent facts or use outside "
+            "knowledge. If the source lacks enough factual information, return an empty "
+            "mcqs array. Each question must have four options prefixed A., B., C., D., "
+            "one correct_answer letter (A/B/C/D), and a brief source-grounded explanation. "
+            'Return only valid JSON in this format: {"mcqs":[{"question":"...",'
+            '"options":["A. ...","B. ...","C. ...","D. ..."],'
+            '"correct_answer":"A","explanation":"..."}]}'
         )
 
-        api_key = getattr(settings, "AI_API_KEY", "")
-        model = getattr(settings, "AI_MODEL", "gpt-4o-mini")
-        if not api_key:
-            return None
-
-        import httpx
-
         try:
-            headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-            payload = {
-                "model": model,
-                "messages": [
+            raw = self.provider.generate_chat(
+                [
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": content[:getattr(settings, "AI_MAX_INPUT_CHARS", 4000)]},
+                    {"role": "user", "content": content[:6000]},
                 ],
-                "temperature": 0.3,
-                "response_format": {"type": "json_object"},
-            }
-            with httpx.Client(timeout=15.0) as client:
-                res = client.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
-                if res.status_code == 200:
-                    data = res.json()
-                    parsed = json.loads(data["choices"][0]["message"]["content"])
-                    raw_mcqs = parsed.get("mcqs", [])
-                    validated = [self._validate_mcq(q, event) for q in raw_mcqs]
-                    return [q for q in validated if q is not None][:count]
-        except Exception as exc:
-            logger.warning("AI MCQ API call failed: %s", exc)
+                temperature=0.2,
+            )
+            if not raw:
+                return None
 
-        return None
+            cleaned = re.sub(
+                r"^\\s*```(?:json)?\\s*|\\s*```\\s*$",
+                "",
+                raw.strip(),
+                flags=re.IGNORECASE,
+            )
+            parsed = json.loads(cleaned)
+            raw_mcqs = parsed.get("mcqs", []) if isinstance(parsed, dict) else []
+
+            validated = [
+                self._validate_mcq(q, event)
+                for q in raw_mcqs
+                if isinstance(q, dict)
+            ]
+            return [q for q in validated if q is not None][:count]
+
+        except Exception as exc:
+            logger.warning(
+                "Configured AI provider MCQ generation failed for event %s: %s",
+                event.id,
+                exc,
+            )
+            return None
 
     def _validate_mcq(self, q: Dict[str, Any], event: Event) -> Optional[Dict[str, Any]]:
         """Validate MCQ structure and return cleaned version or None."""
@@ -373,7 +409,7 @@ class ExamIntelligenceService:
         mcqs: List[Dict[str, Any]] = []
 
         title = event.title or ""
-        domain = event.domain or "General"
+        domain = event.domain or "Technology"
         event_type = event.event_type or "event"
         summary = event.summary or ""
 
@@ -474,4 +510,3 @@ class ExamIntelligenceService:
                 })
 
         return mcqs[:count]
-

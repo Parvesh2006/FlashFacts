@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from app.schemas.domain import validate_exam_domain
 
 
 class SourceBase(BaseModel):
@@ -8,13 +9,16 @@ class SourceBase(BaseModel):
     url: str = Field(..., json_schema_extra={"example": "https://techcrunch.com"})
     feed_url: str = Field(..., json_schema_extra={"example": "https://techcrunch.com/feed/"})
     source_type: str = Field("rss", json_schema_extra={"example": "rss"})
-    domain: str = Field("General", json_schema_extra={"example": "Technology"})
+    domain: str = Field("Technology", json_schema_extra={"example": "Technology"})
     reliability_score: float = Field(1.0, ge=0.0, le=1.0)
     enabled: bool = True
 
 
 class SourceCreate(SourceBase):
-    pass
+    @field_validator("domain")
+    @classmethod
+    def domain_must_be_exam_oriented(cls, value: str) -> str:
+        return validate_exam_domain(value)
 
 
 class SourceUpdate(BaseModel):
@@ -26,6 +30,11 @@ class SourceUpdate(BaseModel):
     reliability_score: Optional[float] = None
     enabled: Optional[bool] = None
     last_ingested_at: Optional[datetime] = None
+
+    @field_validator("domain")
+    @classmethod
+    def domain_must_be_exam_oriented(cls, value: Optional[str]) -> Optional[str]:
+        return validate_exam_domain(value) if value is not None else value
 
 
 class SourceResponse(SourceBase):

@@ -15,8 +15,11 @@ def list_domains(db: Session = Depends(get_db)):
     repo = EventRepository(db)
     counts_map = {d.domain: d.count for d in repo.get_domain_counts()}
 
-    # Return all 13 core domain categories with their counts (0 if no events)
-    all_domains = list(KeywordDomainClassifier.DOMAIN_KEYWORDS.keys())
+    # Return all supported exam-oriented categories with their counts (0 if no events)
+    all_domains = [
+        d for d in KeywordDomainClassifier.DOMAIN_KEYWORDS.keys()
+        if d not in ("General", "General News", "Crime")
+    ]
     response = []
     for domain in all_domains:
         response.append(

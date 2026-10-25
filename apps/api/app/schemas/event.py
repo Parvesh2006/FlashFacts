@@ -1,9 +1,10 @@
 from datetime import datetime, date
 from typing import List, Optional
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.schemas.source import SourceResponse
+from app.schemas.domain import validate_exam_domain
 
 
 class EntityResponse(BaseModel):
@@ -54,9 +55,13 @@ class EventBase(BaseModel):
     ai_processed_at: Optional[datetime] = None
     processing_status: str = "completed"
 
-
 class EventCreate(EventBase):
     dedup_hash: str
+
+    @field_validator("domain")
+    @classmethod
+    def domain_must_be_exam_oriented(cls, value: str) -> str:
+        return validate_exam_domain(value)
 
 
 class EventResponse(EventBase):

@@ -12,6 +12,11 @@ import {
   GraduationCap,
   Settings,
   Zap,
+  BookOpen,
+  Target,
+  AlertCircle,
+  CheckSquare,
+  BarChart3,
 } from "lucide-react";
 
 export interface NavItem {
@@ -23,11 +28,16 @@ export interface NavItem {
 
 export const navItems: NavItem[] = [
   { name: "Overview", href: "/", icon: LayoutDashboard },
+  { name: "Daily Exam Feed", href: "/exams", icon: GraduationCap },
+  { name: "PYQ Bank", href: "/pyqs", icon: BookOpen, badge: "PYQ" },
+  { name: "Mock Tests", href: "/mock-tests", icon: Target, badge: "Mock" },
+  { name: "Mistake Book", href: "/revision", icon: AlertCircle },
+  { name: "Syllabus Tracker", href: "/syllabus", icon: CheckSquare },
+  { name: "Performance", href: "/analytics", icon: BarChart3 },
+  { name: "Ask FlashFacts", href: "/ask", icon: MessageSquareText, badge: "AI" },
   { name: "Explore", href: "/explore", icon: Compass },
   { name: "Calendar", href: "/calendar", icon: Calendar },
   { name: "Search", href: "/search", icon: Search },
-  { name: "Ask FlashFacts", href: "/ask", icon: MessageSquareText, badge: "AI" },
-  { name: "Exam Mode", href: "/exams", icon: GraduationCap },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
@@ -75,9 +85,27 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const getItem = (href: string) => navItems.find((item) => item.href === href)!;
   const sections = [
-    { label: "MAIN", items: [getItem("/"), getItem("/explore"), getItem("/calendar")] },
-    { label: "INTELLIGENCE", items: [getItem("/search"), getItem("/ask")] },
-    { label: "LEARNING", items: [getItem("/exams")] },
+    {
+      label: "EXAM PORTAL",
+      items: [
+        getItem("/exams"),
+        getItem("/pyqs"),
+        getItem("/mock-tests"),
+        getItem("/revision"),
+        getItem("/syllabus"),
+        getItem("/analytics"),
+      ],
+    },
+    {
+      label: "INTELLIGENCE",
+      items: [
+        getItem("/"),
+        getItem("/ask"),
+        getItem("/explore"),
+        getItem("/calendar"),
+        getItem("/search"),
+      ],
+    },
   ];
   const settings = getItem("/settings");
 
@@ -107,9 +135,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           >
             <h1 className="flex items-center gap-1.5 text-lg font-extrabold tracking-normal text-[var(--text-primary)]">
               FLASHFACTS
-              <span className="soft-badge px-1.5 py-0.5 text-[10px] font-mono uppercase">v2.5</span>
+              <span className="soft-badge px-1.5 py-0.5 text-[10px] font-mono uppercase">PRO</span>
             </h1>
-            <p className="meta-text mt-1 uppercase">Current Affairs Intelligence</p>
+            <p className="meta-text mt-1 uppercase">Exam Intelligence Portal</p>
           </Link>
         </div>
       </div>
@@ -123,7 +151,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             >
               {section.label}
             </h2>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {section.items.map((item) => (
                 <SidebarNavItem key={item.href} item={item} pathname={pathname} collapsed={collapsed} />
               ))}
@@ -133,14 +161,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       </div>
 
       <div className={`space-y-3 border-t bg-[var(--surface-muted)]/45 p-4 ${collapsed ? "px-3" : ""}`}>
-        <p className={`eyebrow px-2 text-[10px] tracking-[0.14em] ${collapsed ? "hidden" : ""}`}>BOTTOM AREA</p>
         <SidebarNavItem item={settings} pathname={pathname} collapsed={collapsed} />
         <div className={`flex items-center justify-between border-t pt-3 meta-text ${collapsed ? "justify-center" : ""}`}>
           <span className="flex items-center gap-1.5" title="API Connected">
             <span className="h-2 w-2 rounded-full bg-[var(--success)] animate-pulse" />
-            {!collapsed && <span>API Connected</span>}
+            {!collapsed && <span>FastAPI + PG</span>}
           </span>
-          {!collapsed && <span>FastAPI</span>}
+          {!collapsed && <span>v2.5</span>}
         </div>
       </div>
     </aside>

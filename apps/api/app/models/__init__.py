@@ -8,6 +8,13 @@ from app.models.exam_intelligence import EventExamMetadata, EventExamRelevance
 from app.models.processing_job import ProcessingJob
 from app.models.ingestion_run import IngestionRun
 from app.models.source_ingestion_metric import SourceIngestionMetric
+from app.models.pyq import PYQ
+from app.models.pyq_paper import PYQPaper
+from app.models.mock_test import MockTest, MockTestQuestion, MockTestAttempt
+from app.models.user import User
+from app.models.pyq_bookmark import PYQBookmark
+from app.models.revision_item import RevisionItem
+from app.models.syllabus import SyllabusTopic, UserSyllabusProgress
 
 __all__ = [
     "Source",
@@ -23,5 +30,15 @@ __all__ = [
     "EventExamRelevance",
     "ProcessingJob",
     "IngestionRun",
-    "SourceIngestionMetric"
+    "SourceIngestionMetric",
+    "PYQ",
+    "PYQPaper",
+    "MockTest",
+    "MockTestQuestion",
+    "MockTestAttempt",
+    "User",
+    "PYQBookmark",
+    "RevisionItem",
+    "SyllabusTopic",
+    "UserSyllabusProgress",
 ]

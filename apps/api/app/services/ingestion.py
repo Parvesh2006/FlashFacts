@@ -21,6 +21,7 @@ from app.repositories.event_repository import EventRepository
 from app.services.extraction import EventExtractorService
 from app.services.deduplication import DeduplicationService
 from app.services.ai_provider import get_ai_provider
+from app.services.location_service import LocationService
 from app.utils.hashing import compute_content_hash
 
 logger = logging.getLogger("app")
@@ -35,6 +36,7 @@ class IngestionService:
         self.extractor = EventExtractorService()
         self.dedup = DeduplicationService(self.event_repo)
         self.ai_provider = get_ai_provider()
+        self.location_service = LocationService(db)
 
     def parse_datetime(self, entry: Dict[str, Any]) -> datetime:
         dt_raw = entry.get("published") or entry.get("updated") or entry.get("pubDate")
@@ -51,7 +53,7 @@ class IngestionService:
     def fetch_feed(self, feed_url: str) -> Tuple[Optional[feedparser.FeedParserDict], Optional[int], Optional[str]]:
         """
         Fetch a feed URL with error handling and retry mechanism.
-        
+
         Returns:
             Tuple of (parsed_feed, http_status, error_message)
         """
@@ -104,7 +106,7 @@ class IngestionService:
         """
         Ingest a single source with comprehensive error handling and metrics tracking.
         One source failure MUST NOT stop the entire ingestion run.
-        
+
         Returns:
             SourceIngestionMetric tracking the results for this source
         """
@@ -113,17 +115,17 @@ class IngestionService:
             source_id=source.id,
             started_at=datetime.now(timezone.utc)
         )
-        
+
         start_time = time.time()
-        
+
         try:
             logger.info(f"Ingestion started for source: '{source.name}' (ID: {source.id})")
             source.last_attempted_at = datetime.now(timezone.utc)
-            
+
             # 1. Fetch Feed
             feed, http_status, error_msg = self.fetch_feed(source.feed_url)
             metric.http_status = http_status
-            
+
             if not feed or not hasattr(feed, "entries"):
                 if error_msg:
                     metric.error_message = error_msg
@@ -131,23 +133,23 @@ class IngestionService:
                 else:
                     metric.error_message = f"Empty or invalid feed for source '{source.name}'"
                     metric.status = "invalid_feed"
-                
+
                 logger.warning(f"Failed to ingest source '{source.name}': {metric.error_message}")
                 return metric
 
             metric.documents_discovered = len(feed.entries)
-            
+
             # 2. Process each entry in the feed
             for entry in feed.entries:
                 try:
                     url = entry.get("link") or entry.get("id") or ""
                     title = entry.get("title") or ""
-                    
+
                     # Content extraction
                     content = entry.get("summary") or ""
                     if not content and "content" in entry and len(entry.get("content", [])) > 0:
                         content = entry.get("content")[0].get("value", "")
-                    
+
                     # Validate entry
                     if not title and not content:
                         continue
@@ -229,6 +231,7 @@ class IngestionService:
 
                         event_in, _ = self.dedup.prepare_event_candidate(event_candidate)
                         new_event = self.event_repo.create(event_in, document_id=doc.id)
+                        self.location_service.attach_locations_to_event(new_event)
 
                         # Attach Entities if extracted
                         entities_data = enrichment.get("entities", [])
@@ -263,7 +266,7 @@ class IngestionService:
             metric.completed_at = datetime.now(timezone.utc)
             metric.processing_time_ms = (time.time() - start_time) * 1000
             self.db.add(metric)
-            
+
             if metric.status == "success":
                 source.last_ingested_at = datetime.now(timezone.utc)
                 source.last_error = None
@@ -276,12 +279,12 @@ class IngestionService:
     def ingest_all_enabled_sources(self) -> Dict[str, Any]:
         """
         Ingest all enabled sources with comprehensive tracking.
-        
+
         If one source fails, continue with the next source.
         Track all metrics per source and aggregate them.
         """
         run_start_time = time.time()
-        
+
         # Create ingestion run tracker
         ingestion_run = IngestionRun(
             started_at=datetime.now(timezone.utc),
@@ -290,9 +293,9 @@ class IngestionService:
         self.db.add(ingestion_run)
         self.db.commit()
         self.db.refresh(ingestion_run)
-        
+
         logger.info(f"Ingestion run {ingestion_run.id} started")
-        
+
         # Also create a ProcessingJob for backwards compatibility
         job = ProcessingJob(job_type="ingestion", status="running", items_processed=0)
         self.db.add(job)
@@ -301,7 +304,7 @@ class IngestionService:
 
         sources = self.source_repo.list_sources(enabled_only=True)
         ingestion_run.sources_attempted = len(sources)
-        
+
         source_metrics = []
 
         for source in sources:
@@ -309,14 +312,14 @@ class IngestionService:
                 # Ingest this source (source failure will NOT stop the run)
                 metric = self.ingest_source(source, ingestion_run)
                 source_metrics.append(metric)
-                
+
                 # Update run counters
                 if metric.status == "success":
                     ingestion_run.sources_succeeded += 1
                 else:
                     ingestion_run.sources_failed += 1
                     ingestion_run.error_count += 1
-                    
+
             except Exception as e:
                 # Even if ingest_source raises, we continue
                 logger.error(f"Exception handling source '{source.name}': {e}", exc_info=True)

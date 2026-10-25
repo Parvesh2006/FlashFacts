@@ -135,6 +135,10 @@ class EventRepository:
 
         if domain:
             query = query.filter(Event.domain.ilike(domain))
+        else:
+            # Exclude non-exam domains from default competitive-exam current-affairs feed
+            non_exam_domains = ["Entertainment", "Crime", "Lifestyle", "Gossip", "Cinema"]
+            query = query.filter(~Event.domain.in_(non_exam_domains))
         if event_date:
             query = query.filter(Event.event_date == event_date)
         if start_date:
@@ -144,15 +148,15 @@ class EventRepository:
 
         if exam:
             exam_norm = exam.strip().upper()
-            if exam_norm == "TNPSC":
+            if "TNPSC" in exam_norm:
                 exam_type_val = "TNPSC"
-            elif exam_norm == "UPSC":
+            elif "UPSC" in exam_norm:
                 exam_type_val = "UPSC"
-            elif exam_norm == "SSC":
+            elif "SSC" in exam_norm:
                 exam_type_val = "SSC"
-            elif exam_norm == "BANKING":
+            elif "BANK" in exam_norm:
                 exam_type_val = "BANKING"
-            elif exam_norm == "RAILWAY":
+            elif "RAILWAY" in exam_norm or "RRB" in exam_norm:
                 exam_type_val = "RAILWAY"
             else:
                 exam_type_val = "GENERAL_GOVT"
@@ -161,6 +165,8 @@ class EventRepository:
                 EventExamRelevance.exam_type == exam_type_val,
                 EventExamRelevance.relevance_level.in_(["VERY_HIGH", "HIGH", "MEDIUM"])
             )
+            non_exam_domains = ["Entertainment", "Crime", "Lifestyle", "Gossip", "Cinema"]
+            query = query.filter(~Event.domain.in_(non_exam_domains))
 
         if geography:
             geo_norm = geography.strip().upper()
@@ -210,18 +216,42 @@ class EventRepository:
                 joinedload(Event.exam_relevances),
             )
         )
-        pattern = f"%{query_text.strip()}%"
-        query = query.filter(
-            or_(
-                Event.title.ilike(pattern),
-                Event.summary.ilike(pattern),
-                Event.domain.ilike(pattern),
-                Event.source_url.ilike(pattern),
-                Event.event_sources.any(
-                    EventSource.document.has(Document.content.ilike(pattern))
-                ),
+        # Strict Unicode-aware keyword filtering.
+        # Match every meaningful query term against event metadata.
+        import re
+
+        stop_words = {
+            "a", "an", "the", "is", "are", "was", "were",
+            "in", "on", "at", "of", "for", "to", "from",
+            "and", "or", "with", "about", "what", "which",
+            "who", "how", "me", "tell", "show", "find",
+            "give", "latest", "news", "current", "affairs",
+            "today", "event", "events",
+        }
+        terms = list(dict.fromkeys(
+            term for term in re.findall(
+                r"[^\W_]+", query_text.casefold(), flags=re.UNICODE
             )
-        )
+            if term not in stop_words and len(term) > 1
+        ))
+        if not terms:
+            terms = [query_text.strip()]
+
+        for term in terms:
+            variants = [term]
+            tamil_plural_suffix = "\u0b99\u0bcd\u0b95\u0bb3\u0bcd"
+            if term.endswith(tamil_plural_suffix) and len(term) > 5:
+                variants.append(term[:-5])
+
+            term_conditions = []
+            for variant in variants:
+                pattern = f"%{variant}%"
+                term_conditions.extend([
+                    Event.title.ilike(pattern),
+                    Event.summary.ilike(pattern),
+                    Event.domain.ilike(pattern),
+                ])
+            query = query.filter(or_(*term_conditions))
 
         if domain:
             query = query.filter(Event.domain.ilike(domain))
@@ -239,6 +269,8 @@ class EventRepository:
                 EventExamRelevance.exam_type == exam_type_val,
                 EventExamRelevance.relevance_level.in_(["VERY_HIGH", "HIGH", "MEDIUM"])
             )
+            non_exam_domains = ["Entertainment", "Crime", "Lifestyle", "Gossip", "Cinema"]
+            query = query.filter(~Event.domain.in_(non_exam_domains))
 
         if geography:
             query = query.join(Event.exam_metadata).filter(
@@ -353,8 +385,8 @@ class EventRepository:
             exam_intel_resp = None
         resp_dict = {
             "id": event.id,
-            "title": fix_mojibake(event.title or ""),
-            "summary": fix_mojibake(event.summary or ""),
+            "title": event.title or "",
+            "summary": event.summary or "",
             "domain": event.domain,
             "event_type": event.event_type,
             "event_date": event.event_date,
@@ -365,7 +397,7 @@ class EventRepository:
             "url": event.source_url,
             "confidence_score": event.confidence_score,
             "dedup_hash": event.dedup_hash,
-            "why_it_matters": fix_mojibake(event.why_it_matters or ""),
+            "why_it_matters": event.why_it_matters or "",
             "importance_score": event.importance_score,
             "classification_confidence": event.classification_confidence,
             "ai_processed_at": event.ai_processed_at,

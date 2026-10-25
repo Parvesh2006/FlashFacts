@@ -16,7 +16,7 @@ def test_source(db_session):
         url="https://example.com",
         feed_url="https://example.com/rss",
         source_type="rss",
-        domain="General",
+        domain="Government",
         reliability_score=1.0,
         enabled=True,
     )
