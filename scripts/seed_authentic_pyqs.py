@@ -286,6 +286,10 @@ AUTHENTIC_PYQ_DATA = [
 
 
 def seed_pyqs():
+    raise RuntimeError(
+        "Unsafe PYQ seed disabled: question-to-paper authenticity has not been verified. "
+        "Use the reviewed source-PDF workflow instead."
+    )
     db = SessionLocal()
     try:
         inserted = 0

@@ -24,11 +24,11 @@ class PYQPaper(Base):
     authority = Column(String(200), nullable=False)
 
     checksum_sha256 = Column(String(64), nullable=True, index=True)
-    verification_status = Column(String(30), nullable=False, default="verified_official")
-    redistribution_status = Column(String(50), nullable=False, default="official_open_access")
+    verification_status = Column(String(30), nullable=False, default="unverified")
+    redistribution_status = Column(String(50), nullable=False, default="unknown")
     file_size_bytes = Column(BigInteger, nullable=True)
     mime_type = Column(String(50), nullable=False, default="application/pdf")
-    availability_status = Column(String(30), nullable=False, default="available")  # available, source_link_only, restricted
+    availability_status = Column(String(30), nullable=False, default="source_link_only")  # available, source_link_only, restricted
     download_count = Column(Integer, nullable=False, default=0)
 
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

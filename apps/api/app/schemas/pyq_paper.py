@@ -18,11 +18,11 @@ class PYQPaperBase(BaseModel):
     pdf_url: Optional[str] = None
     authority: str
     checksum_sha256: Optional[str] = None
-    verification_status: str = "verified_official"
-    redistribution_status: str = "official_open_access"
+    verification_status: str = "unverified"
+    redistribution_status: str = "unknown"
     file_size_bytes: Optional[int] = None
     mime_type: str = "application/pdf"
-    availability_status: str = "available"
+    availability_status: str = "source_link_only"
     download_count: int = 0
 
 

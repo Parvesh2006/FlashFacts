@@ -149,7 +149,7 @@ def list_pyq_papers(
                 download_count=p.download_count,
                 created_at=p.created_at,
                 updated_at=p.updated_at,
-                has_local_file=local_file is not None,
+                has_local_file=(p.verification_status == "verified_official" and local_file is not None),
             )
         )
 
@@ -193,96 +193,92 @@ def get_pyq_paper(paper_id: str, db: Session = Depends(get_db)):
         download_count=paper.download_count,
         created_at=paper.created_at,
         updated_at=paper.updated_at,
-        has_local_file=local_file is not None,
+        has_local_file=(paper.verification_status == "verified_official" and local_file is not None),
     )
+
+
+
+def _require_source_page(paper):
+    """Permit local PDF access only after explicit verification."""
+    if paper.availability_status == "restricted":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access to this document is restricted.",
+        )
+
+    if paper.verification_status != "verified_official":
+        source = paper.source_url or ""
+        if source.startswith("https://"):
+            return RedirectResponse(url=source, status_code=307)
+        raise HTTPException(
+            status_code=404,
+            detail="This question paper has not been verified.",
+        )
+    return None
 
 
 @router.get("/papers/{paper_id}/pdf")
 def view_pyq_paper_pdf(paper_id: str, db: Session = Depends(get_db)):
-    """
-    Open or stream the verified question paper PDF for browser inline viewing.
-    Falls back gracefully to the verified official source URL if local file is unavailable.
-    """
     repo = PYQPaperRepository(db)
     paper = repo.get(paper_id)
     if not paper:
         raise HTTPException(status_code=404, detail="Question paper not found")
 
-    if paper.availability_status == "restricted":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access to this document is restricted by the issuing examination authority.",
-        )
+    redirect = _require_source_page(paper)
+    if redirect:
+        return redirect
 
-    # 1. Check local storage
     local_file = resolve_safe_pdf_path(paper.storage_path)
-    if local_file:
-        if not verify_pdf_magic_bytes(local_file):
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Stored document failed PDF signature validation.",
-            )
+    if local_file and verify_pdf_magic_bytes(local_file):
         return FileResponse(
             path=str(local_file),
             media_type="application/pdf",
             filename=f"{paper.id}.pdf",
         )
 
-    # 2. Redirect to verified direct PDF URL if available
-    if paper.pdf_url:
-        return RedirectResponse(url=paper.pdf_url, status_code=307)
+    source = paper.source_url or ""
+    if source.startswith("https://"):
+        return RedirectResponse(url=source, status_code=307)
 
-    # 3. Fallback to original source page
-    if paper.source_url:
-        return RedirectResponse(url=paper.source_url, status_code=307)
-
-    raise HTTPException(status_code=404, detail="No authorized PDF location configured for this paper.")
+    raise HTTPException(status_code=404, detail="Verified PDF is unavailable.")
 
 
 @router.get("/papers/{paper_id}/download")
 def download_pyq_paper_pdf(paper_id: str, db: Session = Depends(get_db)):
-    """
-    Download verified question paper PDF with Content-Disposition attachment headers,
-    recording download statistics when permitted.
-    """
     repo = PYQPaperRepository(db)
     paper = repo.get(paper_id)
     if not paper:
         raise HTTPException(status_code=404, detail="Question paper not found")
 
-    if paper.availability_status == "restricted":
+    redirect = _require_source_page(paper)
+    if redirect:
+        return redirect
+
+    if paper.redistribution_status != "official_open_access":
+        source = paper.source_url or ""
+        if source.startswith("https://"):
+            return RedirectResponse(url=source, status_code=307)
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Direct download is restricted by the issuing authority.",
+            status_code=403,
+            detail="Redistribution permission has not been confirmed.",
         )
-
-    repo.increment_download(paper_id)
-
-    # Sanitize download filename
-    clean_title = re.sub(r"[^a-zA-Z0-9_\-]", "_", paper.title)[:60]
-    filename = f"{clean_title}_{paper.year}.pdf"
 
     local_file = resolve_safe_pdf_path(paper.storage_path)
-    if local_file:
-        if not verify_pdf_magic_bytes(local_file):
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Stored document failed PDF signature validation.",
-            )
-        return FileResponse(
-            path=str(local_file),
-            media_type="application/pdf",
-            filename=filename,
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-        )
+    if not local_file or not verify_pdf_magic_bytes(local_file):
+        source = paper.source_url or ""
+        if source.startswith("https://"):
+            return RedirectResponse(url=source, status_code=307)
+        raise HTTPException(status_code=404, detail="Verified PDF is unavailable.")
 
-    if paper.pdf_url:
-        return RedirectResponse(url=paper.pdf_url, status_code=307)
-
-    if paper.source_url:
-        return RedirectResponse(url=paper.source_url, status_code=307)
-
-    raise HTTPException(status_code=404, detail="No downloadable file available for this paper.")
+    clean_title = re.sub(r"[^a-zA-Z0-9_-]", "_", paper.title)[:60]
+    filename = f"{clean_title}_{paper.year}.pdf"
+    repo.increment_download(paper_id)
+    return FileResponse(
+        path=str(local_file),
+        media_type="application/pdf",
+        filename=filename,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.post("/papers", response_model=PYQPaperResponse, status_code=201)
@@ -343,7 +339,7 @@ def create_pyq_paper(
         download_count=paper.download_count,
         created_at=paper.created_at,
         updated_at=paper.updated_at,
-        has_local_file=resolve_safe_pdf_path(paper.storage_path) is not None,
+        has_local_file=(paper.verification_status == "verified_official" and resolve_safe_pdf_path(paper.storage_path) is not None),
     )
 
 

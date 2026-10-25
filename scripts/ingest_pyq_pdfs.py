@@ -45,9 +45,9 @@ APPROVED_PAPERS: List[Dict[str, Any]] = [
         "source_url": "https://www.tnpsc.gov.in",
         "pdf_url": "https://www.tnpsc.gov.in/document/QP_CCS4_2024.pdf",
         "authority": "Tamil Nadu Public Service Commission (TNPSC)",
-        "verification_status": "verified_official",
-        "redistribution_status": "official_open_access",
-        "availability_status": "available",
+        "verification_status": "unverified",
+        "redistribution_status": "unknown",
+        "availability_status": "source_link_only",
         "sample_questions": [
             "1. Tamil Nadu State Policy on Women was formulated in which year? (A) 2021 (B) 2022 (C) 2023 (D) 2024",
             "2. Match the Archaeological Sites with river valleys: Keeladi, Kodumanal, Adichanallur, Mayiladumparai.",
@@ -70,9 +70,9 @@ APPROVED_PAPERS: List[Dict[str, Any]] = [
         "source_url": "https://www.tnpsc.gov.in",
         "pdf_url": "https://www.tnpsc.gov.in/document/QP_CCS2_2024_PRE.pdf",
         "authority": "Tamil Nadu Public Service Commission (TNPSC)",
-        "verification_status": "verified_official",
-        "redistribution_status": "official_open_access",
-        "availability_status": "available",
+        "verification_status": "unverified",
+        "redistribution_status": "unknown",
+        "availability_status": "source_link_only",
         "sample_questions": [
             "1. Periyar E.V. Ramasamy started Self-Respect Movement in: (A) 1920 (B) 1925 (C) 1930 (D) 1935",
             "2. The Finance Commission of India is constituted under which Article of the Constitution?",
@@ -94,9 +94,9 @@ APPROVED_PAPERS: List[Dict[str, Any]] = [
         "source_url": "https://upsc.gov.in/examinations/previous-question-papers",
         "pdf_url": "https://www.upsc.gov.in/sites/default/files/QP-CSM-26-010926-GENERAL%20STUDIES%20PAPER%20-%20I.pdf",
         "authority": "Union Public Service Commission (UPSC)",
-        "verification_status": "verified_official",
-        "redistribution_status": "official_open_access",
-        "availability_status": "available",
+        "verification_status": "unverified",
+        "redistribution_status": "unknown",
+        "availability_status": "source_link_only",
         "sample_questions": [
             "1. Consider the following: Red Sea, Black Sea, Caspian Sea, Mediterranean Sea bordering nations.",
             "2. With reference to the Indian economy, consider Repo Rate, Reverse Repo Rate and Monetary Policy.",
@@ -118,9 +118,9 @@ APPROVED_PAPERS: List[Dict[str, Any]] = [
         "source_url": "https://upsc.gov.in/examinations/previous-question-papers",
         "pdf_url": "https://www.upsc.gov.in/sites/default/files/QP-CSM-26-010926-GENERAL-STUDIES-PAPER%20-%20II.pdf",
         "authority": "Union Public Service Commission (UPSC)",
-        "verification_status": "verified_official",
-        "redistribution_status": "official_open_access",
-        "availability_status": "available",
+        "verification_status": "unverified",
+        "redistribution_status": "unknown",
+        "availability_status": "source_link_only",
         "sample_questions": [
             "1. Reading Comprehension: Sustainable development vs industrialized resource consumption.",
             "2. Number Theory: Find the remainder when 91*92*93*...*99 is divided by 1261.",
@@ -141,9 +141,9 @@ APPROVED_PAPERS: List[Dict[str, Any]] = [
         "source_url": "https://upsc.gov.in/examinations/previous-question-papers",
         "pdf_url": "https://www.upsc.gov.in/sites/default/files/QP-CDSE-II-26-GENERAL-KNOWLEDGE-140926.pdf",
         "authority": "Union Public Service Commission (UPSC)",
-        "verification_status": "verified_official",
-        "redistribution_status": "official_open_access",
-        "availability_status": "available",
+        "verification_status": "unverified",
+        "redistribution_status": "unknown",
+        "availability_status": "source_link_only",
         "sample_questions": [
             "1. Operation Kaveri was launched by Government of India to evacuate citizens from which conflict zone?",
             "2. Which island in the Indian Ocean houses the naval communication facility Diego Garcia?",
@@ -164,9 +164,9 @@ APPROVED_PAPERS: List[Dict[str, Any]] = [
         "source_url": "https://www.rrbcdg.gov.in",
         "pdf_url": "https://www.rrbcdg.gov.in/archive/RRB_NTPC_CBT1_2021.pdf",
         "authority": "Railway Recruitment Boards (RRB), Ministry of Railways",
-        "verification_status": "verified_official",
-        "redistribution_status": "official_open_access",
-        "availability_status": "available",
+        "verification_status": "unverified",
+        "redistribution_status": "unknown",
+        "availability_status": "source_link_only",
         "sample_questions": [
             "1. Where is the headquarters of South Central Railway located? (A) Secunderabad (B) Hubli (C) Chennai (D) Bilaspur",
             "2. What is the full form of URL in computer science? (Uniform Resource Locator)",
@@ -187,9 +187,9 @@ APPROVED_PAPERS: List[Dict[str, Any]] = [
         "source_url": "https://ssc.gov.in",
         "pdf_url": "https://ssc.gov.in/api/archive/SSC_CGL_2023_Tier1.pdf",
         "authority": "Staff Selection Commission (SSC), Government of India",
-        "verification_status": "verified_official",
-        "redistribution_status": "official_open_access",
-        "availability_status": "available",
+        "verification_status": "unverified",
+        "redistribution_status": "unknown",
+        "availability_status": "source_link_only",
         "sample_questions": [
             "1. Which classical dance form originated in the temples of Tamil Nadu? (Bharatanatyam)",
             "2. Which Constitutional Amendment lowered the voting age from 21 to 18 years? (61st Amendment 1988)",
@@ -210,9 +210,9 @@ APPROVED_PAPERS: List[Dict[str, Any]] = [
         "source_url": "https://www.tnpsc.gov.in",
         "pdf_url": "https://www.tnpsc.gov.in/document/QP_CCS4_2022.pdf",
         "authority": "Tamil Nadu Public Service Commission (TNPSC)",
-        "verification_status": "verified_official",
-        "redistribution_status": "official_open_access",
-        "availability_status": "available",
+        "verification_status": "unverified",
+        "redistribution_status": "unknown",
+        "availability_status": "source_link_only",
         "sample_questions": [
             "1. Valluvar describes which of the following as the supreme virtue in Illaram? (Anbudaimai)",
             "2. Which city hosted the 44th FIDE Chess Olympiad in Tamil Nadu? (Mamallapuram / Chennai)",
@@ -223,90 +223,11 @@ APPROVED_PAPERS: List[Dict[str, Any]] = [
 
 
 def generate_standard_pdf(paper: Dict[str, Any]) -> bytes:
-    """
-    Builds a standard, compliant PDF-1.4 binary document containing official
-    examination headers, test paper instructions, metadata, and authentic question samples.
-    """
-    lines = [
-        f"Authority: {paper['authority']}",
-        f"Examination: {paper['exam_name']} ({paper['year']})",
-        f"Subject / Paper: {paper['subject']}",
-        f"Date of Exam: {paper['exam_date']} | Shift: {paper['shift_session']}",
-        f"Paper Code: {paper['paper_code']} | Language: {paper['language'].upper()}",
-        f"Source URL: {paper['source_url']}",
-        "--------------------------------------------------------------------------------",
-        "CANDIDATE INSTRUCTIONS & QUESTION BOOKLET CONTENTS:",
-        "1. Check that the booklet contains all printed questions without any defects.",
-        "2. Darken the appropriate circles on the OMR answer sheet using black ballpoint pen.",
-        "3. Each question carries marks according to the official commission scheme.",
-        "4. Negative marking rules apply as notified in the official examination bulletin.",
-        "--------------------------------------------------------------------------------",
-        "AUTHENTIC EXAM QUESTIONS EXCERPT:",
-    ]
-    for q in paper.get("sample_questions", []):
-        lines.append(q)
-
-    lines.extend([
-        "--------------------------------------------------------------------------------",
-        f"Verification: {paper['verification_status'].upper()} | Redistribution: {paper['redistribution_status']}",
-        "Preserved by FlashFacts Open Examination Intelligence Archive.",
-    ])
-
-    content_stream = [
-        "BT",
-        "/F1 12 Tf",
-        "40 750 Td",
-        f"({paper['title'][:70]}) Tj",
-        "ET",
-    ]
-    y = 720
-    for l in lines:
-        safe_l = (
-            l.replace("\\", "\\\\")
-            .replace("(", "\\(")
-            .replace(")", "\\)")
-            .encode("latin-1", "replace")
-            .decode("latin-1")
-        )
-        content_stream.extend(["BT", "/F1 9 Tf", f"40 {y} Td", f"({safe_l[:85]}) Tj", "ET"])
-        y -= 16
-        if y < 45:
-            break
-
-    stream_text = "\n".join(content_stream).encode("latin-1", "replace")
-    stream_len = len(stream_text)
-
-    objs = [
-        b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
-        b"2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
-        (
-            b"3 0 obj\n<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 4 0 R >> >> "
-            b"/MediaBox [0 0 612 792] /Contents 5 0 R >>\nendobj\n"
-        ),
-        b"4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n",
-        (
-            f"5 0 obj\n<< /Length {stream_len} >>\nstream\n".encode("ascii")
-            + stream_text
-            + b"\nendstream\nendobj\n"
-        ),
-    ]
-
-    pdf = bytearray(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
-    offsets = [0]
-    for obj in objs:
-        offsets.append(len(pdf))
-        pdf.extend(obj)
-
-    xref_pos = len(pdf)
-    pdf.extend(f"xref\n0 {len(offsets)}\n0000000000 65535 f \n".encode("ascii"))
-    for offset in offsets[1:]:
-        pdf.extend(f"{offset:010d} 00000 n \n".encode("ascii"))
-
-    trailer = f"trailer\n<< /Size {len(offsets)} /Root 1 0 R >>\nstartxref\n{xref_pos}\n%%EOF\n"
-    pdf.extend(trailer.encode("ascii"))
-    return bytes(pdf)
-
-
+    """Synthetic papers are prohibited: only ingest genuine source PDF bytes."""
+    raise RuntimeError(
+        "Synthetic PYQ PDF generation is disabled. Obtain and verify the original "
+        "PDF from an authoritative source; never substitute generated content."
+    )
 def run_ingestion(dry_run: bool = False) -> Dict[str, Any]:
     print(f"=== FlashFacts PYQ PDF Ingestion Engine (Dry Run: {dry_run}) ===")
     os.makedirs(PDF_STORAGE_DIR, exist_ok=True)
@@ -321,6 +242,7 @@ def run_ingestion(dry_run: bool = False) -> Dict[str, Any]:
         "updated": 0,
         "skipped_duplicate": 0,
         "errors": 0,
+        "skipped_unverified": 0,
         "papers": [],
     }
 
@@ -330,7 +252,24 @@ def run_ingestion(dry_run: bool = False) -> Dict[str, Any]:
             pdf_filename = f"{paper_id}.pdf"
             pdf_path = PDF_STORAGE_DIR / pdf_filename
 
-            # 1. Generate or verify standard compliant PDF binary
+            # Safety gate: this registry contains source metadata, not original PDF bytes.
+            # Never generate synthetic papers or overwrite records without reviewed source PDFs.
+            stats["skipped_unverified"] += 1
+            stats["papers"].append({
+                "id": paper_id,
+                "exam": p["exam_name"],
+                "year": p["year"],
+                "subject": p["subject"],
+                "language": p["language"],
+                "authority": p["authority"],
+                "checksum": None,
+                "size_bytes": 0,
+                "status": "SKIPPED_NO_VERIFIED_SOURCE_PDF",
+            })
+            print(f"[SKIPPED] {paper_id}: original source PDF has not been reviewed and supplied.")
+            continue
+
+            # Synthetic PDF generation remains prohibited.
             pdf_bytes = generate_standard_pdf(p)
             if not pdf_bytes.startswith(b"%PDF-"):
                 print(f"[ERROR] Invalid PDF signature for {paper_id}")
@@ -432,10 +371,10 @@ def run_ingestion(dry_run: bool = False) -> Dict[str, Any]:
 def generate_sources_documentation(papers: List[Dict[str, Any]]):
     path = DOCS_DIR / "PYQ_LIBRARY_SOURCES.md"
     lines = [
-        "# FlashFacts — Verified Previous Year Question (PYQ) Library Sources",
+        "# FlashFacts - PYQ Library Source Registry",
         "",
         "This document details every curated previous-year examination paper in FlashFacts,",
-        "recording exact provenance, official examination authorities, verified source URLs, and redistribution status.",
+        "This registry lists candidate paper sources and their current verification and redistribution status.",
         "",
         "## Official Authorities & Source Registry",
         "",
@@ -452,11 +391,11 @@ def generate_sources_documentation(papers: List[Dict[str, Any]]):
         "",
         "## Authenticity Verification Standards",
         "",
-        "1. **Official Origin**: Papers originate directly from official boards (TNPSC, UPSC, SSC, RRB).",
-        "2. **Cryptographic Checksum**: Every document is assigned an immutable SHA-256 hash upon ingestion.",
-        "3. **MIME & Signature Verification**: All documents verify standard `%PDF-` binary magic bytes.",
-        "4. **No Synthetics in Production**: Test fixtures are strictly quarantined; production documents reflect genuine past exams.",
-        "5. **Access & Redistribution Integrity**: When open redistribution is permitted, papers are streamed directly. When restricted, source links are preserved without copyright infringement.",
+        "1. **Source Review**: Verify each source with the relevant examination authority before approving a paper.",
+        "2. **Checksum**: Calculate SHA-256 only from the original PDF bytes.",
+        "3. **PDF Validation**: Validate the original PDF signature and content before accepting a source.",
+        "4. **No Synthetic Papers**: Never present illustrative questions or generated PDFs as official examination papers.",
+        "5. **Access & Redistribution**: Confirm permission before hosting a local copy; otherwise retain a source link only.",
         "",
         f"*Report generated automatically on {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')} by FlashFacts Ingestion Engine.*",
     ])
@@ -475,6 +414,7 @@ def generate_ingestion_report(stats: Dict[str, Any], dry_run: bool):
         f"**Ingested / Created**: `{stats['ingested']}`  ",
         f"**Updated Existing**: `{stats['updated']}`  ",
         f"**Errors / Invalid Documents**: `{stats['errors']}`  ",
+        f"**Skipped: Unverified Source PDFs**: `{stats['skipped_unverified']}`  ",
         "",
         "## Processed Question Papers Detail",
         "",
@@ -482,16 +422,18 @@ def generate_ingestion_report(stats: Dict[str, Any], dry_run: bool):
         "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
     ]
     for p in stats["papers"]:
+        checksum = p.get("checksum")
+        checksum_display = f"{checksum[:16]}..." if checksum else "N/A"
         lines.append(
-            f"| `{p['id']}` | {p['exam']} | {p['year']} | {p['subject']} | {p['size_bytes']} B | `{p['checksum'][:16]}...` | **{p['status']}** |"
+            f"| `{p['id']}` | {p['exam']} | {p['year']} | {p['subject']} | {p['size_bytes']} B | `{checksum_display}` | **{p['status']}** |"
         )
 
     lines.extend([
         "",
         "## Document Integrity Checks",
-        "- Magic bytes (`%PDF-1.4`) validated: **100% Passed**",
-        "- Path traversal safeguards verified: **100% Passed**",
-        "- Uniqueness constraint enforcement: **100% Passed**",
+        "- PDF signature validation: not established by this report.",
+        "- Path safety: not measured by this ingestion run.",
+        "- Database uniqueness: not measured by this report.",
         "",
         f"*Generated by `scripts/ingest_pyq_pdfs.py`.*",
     ])
