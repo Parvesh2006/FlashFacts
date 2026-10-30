@@ -361,6 +361,127 @@ def test_trigger_ingestion_endpoint_sync_and_async(client: TestClient):
         assert data_async["status"] == "started"
 
 
+def test_ingestion_lock_prevents_overlapping_runs(client: TestClient):
+    """Calling /api/v1/sources/ingest while a run is active returns HTTP 409 Conflict."""
+    from app.api.v1.sources import _INGESTION_LOCK
+    assert _INGESTION_LOCK.acquire(blocking=False)
+    try:
+        res = client.post("/api/v1/sources/ingest")
+        assert res.status_code == 409
+        assert "already in progress" in res.json()["detail"]
+    finally:
+        _INGESTION_LOCK.release()
+
+
+def test_ingest_single_source_by_id(client: TestClient, db_session: Session):
+    """POST /api/v1/sources/ingest?source_id=X only targets that specific source."""
+    source = Source(name="Target Feed", url="https://target.com", feed_url="https://target.com/rss", domain="Science", enabled=True)
+    db_session.add(source)
+    db_session.commit()
+
+    with patch("app.services.ingestion.IngestionService.ingest_all_enabled_sources") as mock_ingest:
+        mock_ingest.return_value = {
+            "status": "completed",
+            "sources_attempted": 1,
+            "sources_succeeded": 1,
+            "sources_failed": 0,
+            "articles_fetched": 10,
+            "articles_accepted": 8,
+            "articles_stored": 5,
+            "duplicates_skipped": 2,
+            "events_created": 5,
+            "events_deduplicated": 0,
+            "documents_discovered": 10,
+            "documents_ingested": 8,
+            "documents_duplicate": 2,
+            "processing_time_ms": 320.0,
+            "error_count": 0,
+            "errors": []
+        }
+
+        res = client.post(f"/api/v1/sources/ingest?source_id={source.id}")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["sources_attempted"] == 1
+        assert data["articles_stored"] == 5
+        mock_ingest.assert_called_once_with(source_id=source.id)
+
+    # If source ID does not exist, return 404
+    res_404 = client.post("/api/v1/sources/ingest?source_id=999999")
+    assert res_404.status_code == 404
+
+
+def test_source_status_and_timestamps_persistence_on_failure(db_session: Session):
+    """When a feed fetch fails, last_attempted_at and last_error are committed to DB."""
+    source = Source(
+        name="Broken Feed",
+        url="https://broken.com",
+        feed_url="https://broken.com/rss",
+        domain="Science",
+        enabled=True
+    )
+    db_session.add(source)
+    db_session.commit()
+
+    service = IngestionService(db_session)
+    with patch.object(service, "fetch_feed", return_value=(None, 500, "HTTP 500 Internal Server Error")):
+        run = IngestionRun(started_at=datetime.now(timezone.utc), status="running")
+        db_session.add(run)
+        db_session.commit()
+
+        metric = service.ingest_source(source, run)
+        assert metric.status == "http_error"
+        assert metric.error_message == "HTTP 500 Internal Server Error"
+
+        db_session.refresh(source)
+        assert source.last_attempted_at is not None
+        assert source.last_error == "HTTP 500 Internal Server Error"
+        assert source.last_ingested_at is None
+
+
+def test_truthful_ingestion_summary_response(db_session: Session):
+    """IngestionService.ingest_all_enabled_sources returns accurate counts and per-source errors."""
+    s1 = Source(name="Good Feed", url="https://good.com", feed_url="https://good.com/rss", domain="Science", enabled=True)
+    s2 = Source(name="Bad Feed", url="https://bad.com", feed_url="https://bad.com/rss", domain="Economy", enabled=True)
+    db_session.add_all([s1, s2])
+    db_session.commit()
+
+    mock_good_feed = MagicMock()
+    mock_good_feed.entries = [
+        {
+            "title": "Clean Energy Breakthrough Announced by Ministry",
+            "summary": "Government announces major grid upgrades.",
+            "link": "https://good.com/art1",
+            "published": "Fri, 30 Oct 2026 12:00:00 GMT"
+        }
+    ]
+
+    service = IngestionService(db_session)
+
+    def mock_fetch(url):
+        if "good.com" in url:
+            return mock_good_feed, 200, None
+        return None, 404, "HTTP 404 Not Found"
+
+    with patch.object(service, "fetch_feed", side_effect=mock_fetch):
+        summary = service.ingest_all_enabled_sources()
+
+        assert summary["status"] == "completed"
+        assert summary["sources_attempted"] >= 2
+        assert summary["sources_succeeded"] >= 1
+        assert summary["sources_failed"] >= 1
+        assert "articles_fetched" in summary
+        assert "articles_accepted" in summary
+        assert "articles_stored" in summary
+        assert "duplicates_skipped" in summary
+        assert "errors" in summary
+        assert len(summary["errors"]) >= 1
+
+        bad_err = next((e for e in summary["errors"] if e["source_name"] == "Bad Feed"), None)
+        assert bad_err is not None
+        assert "404" in bad_err["error"]
+
+
 def test_events_api_filters_non_eligible_events(client: TestClient, db_session: Session):
     """GET /api/v1/events must only return events where is_exam_eligible is True."""
     source = Source(name="Src", url="https://s.com", feed_url="https://s.com/rss", domain="Science", enabled=True)

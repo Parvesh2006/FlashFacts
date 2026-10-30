@@ -104,10 +104,13 @@ class Settings(BaseSettings):
     # Ingestion
     INGESTION_ENABLED: bool = False
     INGESTION_INTERVAL_MINUTES: int = 30
-    INGESTION_REQUEST_TIMEOUT: float = 15.0
-    INGESTION_MAX_RETRIES: int = 3
-    INGESTION_RETRY_BACKOFF: float = 1.0
-    INGESTION_USER_AGENT: str = "FlashFacts/0.1 (+https://example.com)"
+    INGESTION_REQUEST_TIMEOUT: float = 12.0
+    INGESTION_MAX_RETRIES: int = 1
+    INGESTION_RETRY_BACKOFF: float = 0.5
+    INGESTION_USER_AGENT: str = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 (FlashFacts/1.0)"
+    )
     INGESTION_FRESHNESS_HOURS: int = 168
 
     # CORS
