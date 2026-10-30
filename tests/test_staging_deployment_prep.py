@@ -289,6 +289,81 @@ def test_lifespan_staging_fails_on_outdated_database():
             asyncio.run(run())
 
 
+def test_alembic_all_revision_ids_fit_version_column():
+    """Verify all migration revision IDs in the project fit within VARCHAR(255) and document >32 char IDs."""
+    import re
+    from pathlib import Path
+
+    versions_dir = Path(__file__).resolve().parent.parent / "apps" / "api" / "alembic" / "versions"
+    assert versions_dir.exists()
+
+    revisions = []
+    for py_file in versions_dir.glob("*.py"):
+        content = py_file.read_text(encoding="utf-8")
+        match = re.search(r"revision(?:\s*:\s*str)?\s*=\s*['\"]([^'\"]+)['\"]", content)
+        if match:
+            rev_id = match.group(1)
+            revisions.append(rev_id)
+            assert len(rev_id) <= 255, f"Revision {rev_id} exceeds VARCHAR(255)"
+
+    assert len(revisions) >= 14
+    # 002_event_enrichment_and_entities has 33 chars and caused Render DataError with VARCHAR(32)
+    long_revisions = [r for r in revisions if len(r) > 32]
+    assert "002_event_enrichment_and_entities" in long_revisions
+    assert len("002_event_enrichment_and_entities") == 33
+
+
+def test_alembic_version_table_impl_generates_255_length():
+    """Verify that alembic DefaultImpl.version_table_impl generates VARCHAR(255) for alembic_version."""
+    import alembic.ddl.impl
+    from alembic import util
+    from sqlalchemy import String
+    from pathlib import Path
+
+    apps_api = str(Path(__file__).resolve().parent.parent / "apps" / "api")
+    # Load env.py to ensure the hook is installed
+    util.load_python_file(str(Path(apps_api) / "alembic"), "env.py")
+
+    mock_dialect = MagicMock()
+    mock_dialect.name = "postgresql"
+    impl_cls = alembic.ddl.impl.DefaultImpl.get_by_dialect(mock_dialect)
+    impl = impl_cls(mock_dialect, MagicMock(), False, False, None, {})
+    vt = impl.version_table_impl(
+        version_table="alembic_version",
+        version_table_schema=None,
+        version_table_pk=True,
+    )
+    version_col = vt.c.version_num
+    assert isinstance(version_col.type, String)
+    assert version_col.type.length == 255
+
+
+def test_alembic_ensure_version_column_length_widens_existing_column():
+    """Verify _ensure_version_column_length alters VARCHAR(32) to VARCHAR(255) on PostgreSQL."""
+    from sqlalchemy import String
+    from alembic import util
+    from pathlib import Path
+
+    apps_api = str(Path(__file__).resolve().parent.parent / "apps" / "api")
+    env_module = util.load_python_file(str(Path(apps_api) / "alembic"), "env.py")
+
+    mock_conn = MagicMock()
+    mock_conn.dialect.name = "postgresql"
+
+    mock_inspector = MagicMock()
+    mock_inspector.has_table.return_value = True
+    mock_inspector.get_columns.return_value = [
+        {"name": "version_num", "type": String(32)}
+    ]
+
+    with patch.object(env_module, "inspect", return_value=mock_inspector):
+        env_module._ensure_version_column_length(mock_conn, version_table="alembic_version")
+        # Check that ALTER TABLE was executed
+        mock_conn.execute.assert_called_once()
+        stmt = str(mock_conn.execute.call_args[0][0])
+        assert 'ALTER TABLE "alembic_version" ALTER COLUMN "version_num" TYPE VARCHAR(255)' in stmt
+
+
 # =========================================================================
 # 3. Worker Singleton Advisory Lock Tests
 # =========================================================================
