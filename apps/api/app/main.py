@@ -24,77 +24,146 @@ def seed_default_sources(db: Session = None):
             return
 
     try:
-        if db.query(Source).count() == 0:
-            # Curated MVP permitted sources covering key domains
-            default_sources = [
-                {
-                    "name": "BBC Technology",
-                    "url": "https://www.bbc.com/news/technology",
-                    "feed_url": "https://feeds.bbci.co.uk/news/technology/rss.xml",
-                    "source_type": "rss",
-                    "domain": "Technology",
-                    "reliability_score": 0.98,
-                    "enabled": True,
-                },
-                {
-                    "name": "BBC Business",
-                    "url": "https://www.bbc.com/news/business",
-                    "feed_url": "https://feeds.bbci.co.uk/news/business/rss.xml",
-                    "source_type": "rss",
-                    "domain": "Economy",
-                    "reliability_score": 0.98,
-                    "enabled": True,
-                },
-                {
-                    "name": "BBC World News",
-                    "url": "https://www.bbc.com/news",
-                    "feed_url": "https://feeds.bbci.co.uk/news/world/rss.xml",
-                    "source_type": "rss",
-                    "domain": "International",
-                    "reliability_score": 0.98,
-                    "enabled": True,
-                },
-                {
-                    "name": "BBC India",
-                    "url": "https://www.bbc.com/news/world/asia/india",
-                    "feed_url": "https://feeds.bbci.co.uk/news/world/asia/india/rss.xml",
-                    "source_type": "rss",
-                    "domain": "International",
-                    "reliability_score": 0.98,
-                    "enabled": True,
-                },
-                {
-                    "name": "NASA Breaking News",
-                    "url": "https://www.nasa.gov/news/",
-                    "feed_url": "https://www.nasa.gov/rss/dyn/breaking_news.rss",
-                    "source_type": "rss",
-                    "domain": "Science",
-                    "reliability_score": 0.99,
-                    "enabled": True,
-                },
-                {
-                    "name": "World Health Organization",
-                    "url": "https://www.who.int",
-                    "feed_url": "https://www.who.int/rss-feeds/news-english.xml",
-                    "source_type": "rss",
-                    "domain": "Medical",
-                    "reliability_score": 0.99,
-                    "enabled": True,
-                },
-                {
-                    "name": "BBC Sport",
-                    "url": "https://www.bbc.com/sport",
-                    "feed_url": "https://feeds.bbci.co.uk/sport/rss.xml",
-                    "source_type": "rss",
-                    "domain": "Sports",
-                    "reliability_score": 0.98,
-                    "enabled": True,
-                }
-            ]
-            for src_data in default_sources:
+        # Curated permitted sources covering national governance, Tamil Nadu, science, and core domains
+        default_sources = [
+            # ── National & Tamil Nadu Governance (UPSC & TNPSC Gold Standard) ──
+            {
+                "name": "The Hindu - Tamil Nadu",
+                "url": "https://www.thehindu.com/news/national/tamil-nadu/",
+                "feed_url": "https://www.thehindu.com/news/national/tamil-nadu/feeder/default.rss",
+                "source_type": "rss",
+                "domain": "Governance",
+                "reliability_score": 0.99,
+                "enabled": True,
+            },
+            {
+                "name": "The Hindu - National",
+                "url": "https://www.thehindu.com/news/national/",
+                "feed_url": "https://www.thehindu.com/news/national/feeder/default.rss",
+                "source_type": "rss",
+                "domain": "National",
+                "reliability_score": 0.99,
+                "enabled": True,
+            },
+            {
+                "name": "PIB India National",
+                "url": "https://pib.gov.in",
+                "feed_url": "https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1",
+                "source_type": "rss",
+                "domain": "Governance",
+                "reliability_score": 1.0,
+                "enabled": True,
+            },
+            {
+                "name": "PIB Tamil Nadu & National (Tamil)",
+                "url": "https://pib.gov.in",
+                "feed_url": "https://pib.gov.in/RssMain.aspx?ModId=6&Lang=2",
+                "source_type": "rss",
+                "domain": "Governance",
+                "reliability_score": 1.0,
+                "enabled": True,
+            },
+            {
+                "name": "BBC News Tamil",
+                "url": "https://www.bbc.com/tamil",
+                "feed_url": "https://feeds.bbci.co.uk/tamil/rss.xml",
+                "source_type": "rss",
+                "domain": "International",
+                "reliability_score": 0.98,
+                "enabled": True,
+            },
+            {
+                "name": "The Hindu - Science & Space",
+                "url": "https://www.thehindu.com/sci-tech/science/",
+                "feed_url": "https://www.thehindu.com/sci-tech/science/feeder/default.rss",
+                "source_type": "rss",
+                "domain": "Science",
+                "reliability_score": 0.99,
+                "enabled": True,
+            },
+            {
+                "name": "The Hindu - Business & Economy",
+                "url": "https://www.thehindu.com/business/",
+                "feed_url": "https://www.thehindu.com/business/feeder/default.rss",
+                "source_type": "rss",
+                "domain": "Economy",
+                "reliability_score": 0.99,
+                "enabled": True,
+            },
+            # ── Established Core Feeds ──
+            {
+                "name": "BBC Technology",
+                "url": "https://www.bbc.com/news/technology",
+                "feed_url": "https://feeds.bbci.co.uk/news/technology/rss.xml",
+                "source_type": "rss",
+                "domain": "Technology",
+                "reliability_score": 0.98,
+                "enabled": True,
+            },
+            {
+                "name": "BBC Business",
+                "url": "https://www.bbc.com/news/business",
+                "feed_url": "https://feeds.bbci.co.uk/news/business/rss.xml",
+                "source_type": "rss",
+                "domain": "Economy",
+                "reliability_score": 0.98,
+                "enabled": True,
+            },
+            {
+                "name": "BBC World News",
+                "url": "https://www.bbc.com/news",
+                "feed_url": "https://feeds.bbci.co.uk/news/world/rss.xml",
+                "source_type": "rss",
+                "domain": "International",
+                "reliability_score": 0.98,
+                "enabled": True,
+            },
+            {
+                "name": "BBC India",
+                "url": "https://www.bbc.com/news/world/asia/india",
+                "feed_url": "https://feeds.bbci.co.uk/news/world/asia/india/rss.xml",
+                "source_type": "rss",
+                "domain": "International",
+                "reliability_score": 0.98,
+                "enabled": True,
+            },
+            {
+                "name": "NASA Breaking News",
+                "url": "https://www.nasa.gov/news/",
+                "feed_url": "https://www.nasa.gov/rss/dyn/breaking_news.rss",
+                "source_type": "rss",
+                "domain": "Science",
+                "reliability_score": 0.99,
+                "enabled": True,
+            },
+            {
+                "name": "World Health Organization",
+                "url": "https://www.who.int",
+                "feed_url": "https://www.who.int/rss-feeds/news-english.xml",
+                "source_type": "rss",
+                "domain": "Medical",
+                "reliability_score": 0.99,
+                "enabled": True,
+            },
+            {
+                "name": "BBC Sport",
+                "url": "https://www.bbc.com/sport",
+                "feed_url": "https://feeds.bbci.co.uk/sport/rss.xml",
+                "source_type": "rss",
+                "domain": "Sports",
+                "reliability_score": 0.98,
+                "enabled": True,
+            }
+        ]
+        added_count = 0
+        for src_data in default_sources:
+            existing = db.query(Source).filter(Source.feed_url == src_data["feed_url"]).first()
+            if not existing:
                 db.add(Source(**src_data))
+                added_count += 1
+        if added_count > 0:
             db.commit()
-            logger.info("Default permitted RSS sources successfully seeded into database.")
+            logger.info(f"{added_count} new permitted RSS sources successfully seeded into database.")
     except Exception as e:
         logger.warning(f"Could not seed default sources: {e}")
     finally:

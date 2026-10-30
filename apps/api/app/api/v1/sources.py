@@ -35,8 +35,19 @@ def create_source(
 
 
 @router.post("/ingest")
-def trigger_ingestion(db: Session = Depends(get_db)):
+def trigger_ingestion(
+    background: bool = Query(False, description="Run ingestion in the background and return immediately"),
+    db: Session = Depends(get_db)
+):
     service = IngestionService(db)
+    if background:
+        import threading
+        thread = threading.Thread(target=service.ingest_all_enabled_sources, daemon=True)
+        thread.start()
+        return {
+            "status": "started",
+            "message": "Ingestion initiated in background thread. Check GET /api/v1/sources or GET /api/v1/events for updates."
+        }
     return service.ingest_all_enabled_sources()
 
 

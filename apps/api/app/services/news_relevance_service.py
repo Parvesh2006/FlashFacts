@@ -196,9 +196,11 @@ class NewsRelevanceService:
                 "reverse repo", "inflation", "cpi", "wpi", "gdp", "economic growth",
                 "fiscal deficit", "union budget", "state budget", "goods and services tax",
                 "gst", "direct tax", "income tax", "foreign direct investment", "fdi",
-                "forex reserves", "banking reform", "nationalised bank", "npa",
+                "forex reserves", "forex", "banking reform", "nationalised bank", "npa",
                 "insolvency", "sebi", "stock exchange", "agriculture census",
                 "minimum support price", "msp", "food security", "disinvestment",
+                "export", "import", "trade deficit", "trade agreement", "manufacturing",
+                "msme", "employment", "unemployment", "pli scheme", "iip", "rupee",
                 "ரிசர்வ் வங்கி", "வட்டி விகிதம்", "பணவீக்கம்", "பொருளாதாரம்", "ஜிடிபி",
                 "பட்ஜெட்", "நிதிநிலை அறிக்கை", "சரக்கு மற்றும் சேவை வரி", "ஜிஎஸ்டி",
                 "வரி விதிப்பு", "நேரடி வரி", "குறைந்தபட்ச ஆதரவு விலை", "விவசாயம்", "உணவுப் பாதுகாப்பு"
@@ -209,17 +211,36 @@ class NewsRelevanceService:
         "Science & Technology": {
             "keywords": [
                 "isro", "nasa", "space mission", "chandrayaan", "gaganyaan", "aditya-l1",
-                "mangalyaan", "satellite", "pslv", "gslv", "sslv", "space telescope",
+                "mangalyaan", "satellite", "pslv", "gslv", "sslv", "space telescope", "telescope",
                 "drdo", "missile test", "defence research", "supercomputer", "quantum mission",
-                "semiconductor mission", "artificial intelligence policy", "biotechnology",
-                "crispr", "genetics", "nuclear power", "renewable energy", "green hydrogen",
-                "patent", "scientific discovery", "indigenous",
+                "quantum", "semiconductor mission", "semiconductor", "microchip", "chip",
+                "artificial intelligence policy", "artificial intelligence", "ai", "machine learning",
+                "cybersecurity", "cyber attack", "cyber-attack", "data breach", "data protection",
+                "biotechnology", "crispr", "genetics", "nuclear power", "renewable energy",
+                "green hydrogen", "patent", "scientific discovery", "indigenous",
+                "astronomy", "astrophysics", "meteorite", "asteroid", "mars", "moon", "lunar",
+                "exoplanet", "space station", "antarctica expedition", "deep sea mission",
                 "இஸ்ரோ", "விண்கலம்", "செயற்கைக்கோள்", "ராக்கெட்", "சந்திரயான்",
                 "ககன்யான்", "டிஆர்டிஓ", "ஏவுகணை", "அறிவியல் கண்டுபிடிப்பு",
-                "சூரிய ஆற்றல்", "பசுமை ஹைட்ரஜன்", "அணுசக்தி"
+                "சூரிய ஆற்றல்", "பசுமை ஹைட்ரஜன்", "அணுசக்தி", "செயற்கை நுண்ணறிவு"
             ],
             "topic_label": "Science, Technology & Innovation",
             "inclusion_reason": "Relevant to Science & Technology — Space missions, scientific research, and innovation",
+        },
+        "Public Health & Medicine": {
+            "keywords": [
+                "world health organization", "who", "public health", "healthcare",
+                "disease", "epidemic", "pandemic", "malaria", "tuberculosis", "tb",
+                "cancer", "vaccine", "vaccination", "immunization", "clinical trial",
+                "drug approval", "icmr", "aiims", "health mission", "ayushman bharat",
+                "sanitation", "mental health", "malnutrition", "stunting", "life expectancy",
+                "health surveillance", "antibiotics", "antimicrobial resistance", "amr",
+                "virus", "polio", "dengue", "cholera", "medical research", "pathogen",
+                "மருத்துவம்", "சுகாதாரம்", "பொது சுகாதாரம்", "தடுப்பூசி", "நோய் தடுப்பு",
+                "மலேரியா", "காசநோய்", "புற்றுநோய்", "மருத்துவ ஆராய்ச்சி"
+            ],
+            "topic_label": "Public Health, Medicine & Social Development",
+            "inclusion_reason": "Relevant to Public Health — Healthcare policies, disease control, and biomedical developments",
         },
         "Environment & Ecology": {
             "keywords": [
@@ -251,11 +272,18 @@ class NewsRelevanceService:
         "International Relations": {
             "keywords": [
                 "united nations", "un security council", "unsc", "un general assembly",
-                "veto", "veto power", "treaty", "bilateral summit", "g20", "brics", "asean",
-                "sco", "quad", "international court of justice", "icj", "wto", "world health organization",
-                "imf", "world bank", "ambassador", "foreign policy", "diplomacy", "extradition",
+                "veto", "veto power", "treaty", "bilateral summit", "bilateral", "summit",
+                "g20", "brics", "asean", "sco", "quad", "international court of justice", "icj",
+                "wto", "world health organization", "imf", "world bank", "ambassador",
+                "foreign policy", "diplomacy", "extradition", "sanctions", "border dispute",
+                "border agreement", "ceasefire", "peace agreement", "envoy", "consulate",
+                "foreign ministry", "bilateral ties", "geopolitics", "geopolitical",
+                "border", "lac", "line of actual control", "loc", "line of control",
+                "disengagement", "foreign relations", "bilateral relations", "cross-border",
+                "bilateral talks", "peace talks", "international treaty", "un peacekeeper",
                 "ஐக்கிய நாடுகள் சபை", "பாதுகாப்பு கவுன்சில்", "வீட்டோ", "ஜி20", "பிரிக்ஸ்",
-                "சர்வதேச ஒப்பந்தம்", "இருதரப்பு பேச்சுவார்த்தை", "வெளியுறவு கொள்கை"
+                "சர்வதேச ஒப்பந்தம்", "இருதரப்பு பேச்சுவார்த்தை", "வெளியுறவு கொள்கை",
+                "எல்லை", "இருதரப்பு உறவு", "அமைதி பேச்சுவார்த்தை"
             ],
             "topic_label": "International Relations & Multilateral Forums",
             "inclusion_reason": "Relevant to International Relations — Global diplomacy, treaties, and international bodies",
@@ -422,7 +450,13 @@ class NewsRelevanceService:
                         score += 15
 
             if matches:
-                if domain and domain.lower() in category.lower():
+                domain_norm = (domain or "").lower()
+                cat_norm = category.lower()
+                if (domain_norm in cat_norm or cat_norm in domain_norm or
+                    (domain_norm == "medical" and "health" in cat_norm) or
+                    (domain_norm == "international" and "international" in cat_norm) or
+                    (domain_norm == "technology" and "technology" in cat_norm) or
+                    (domain_norm == "science" and "science" in cat_norm)):
                     score += 20
 
                 if score > best_score:

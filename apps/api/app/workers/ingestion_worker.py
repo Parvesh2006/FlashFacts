@@ -123,6 +123,7 @@ def run_ingestion_worker(loop: bool = False, interval_minutes: int = 15):
         try:
             current_rev = verify_database_head(engine)
             logger.info("Worker database readiness check passed: revision '%s' matches expected HEAD.", current_rev)
+            seed_default_sources()
         except Exception as e:
             logger.critical("Worker database setup check failed: %s", e)
             sys.exit(1)

@@ -23,6 +23,7 @@ import { DomainGrid } from "@/components/domains/domain-grid";
 import { EventCard } from "@/components/events/event-card";
 import { SkeletonGrid } from "@/components/common/skeleton-loader";
 import { ErrorState } from "@/components/common/error-state";
+import { EmptyState } from "@/components/common/empty-state";
 import { getEvents } from "@/services/events";
 import { getDomains } from "@/services/domains";
 import { getSources } from "@/services/sources";
@@ -250,17 +251,21 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {secondaryStories.length > 0 ? (
+            {events.length === 0 ? (
+              <EmptyState
+                title="Current Affairs Synchronisation Pending"
+                description="Live news feeds from PIB India, The Hindu, and BBC are awaiting the next ingestion cycle. Trigger an instant refresh or practice with authentic PYQ papers and mock tests below."
+                onRetry={fetchDashboardData}
+                actionLabel="Explore PYQ Library"
+                onAction={() => { window.location.href = "/pyqs"; }}
+              />
+            ) : secondaryStories.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {secondaryStories.map((ev) => (
                   <EventCard key={ev.id} event={ev} />
                 ))}
               </div>
-            ) : (
-              <div className="editorial-card p-8 text-center text-xs font-mono text-[var(--text-muted)]">
-                No secondary stories currently available.
-              </div>
-            )}
+            ) : null}
           </section>
 
           {/* 5. Exam Preparation Hub */}
