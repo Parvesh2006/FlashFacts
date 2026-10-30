@@ -63,8 +63,9 @@ class RevisionService:
         exams = [
             r[0]
             for r in self.db.execute(
-                select(distinct(RevisionItem.exam_name))
+                select(RevisionItem.exam_name)
                 .where(RevisionItem.user_id == user_id)
+                .distinct()
                 .order_by(RevisionItem.exam_name)
             ).all()
             if r[0]
@@ -73,8 +74,9 @@ class RevisionService:
         subjects = [
             r[0]
             for r in self.db.execute(
-                select(distinct(RevisionItem.subject))
+                select(RevisionItem.subject)
                 .where(RevisionItem.user_id == user_id, RevisionItem.subject.is_not(None))
+                .distinct()
                 .order_by(RevisionItem.subject)
             ).all()
             if r[0]

@@ -19,13 +19,20 @@ class PYQRepository:
         subject: Optional[str] = None,
         topic: Optional[str] = None,
         language: Optional[str] = None,
+        question_type: Optional[str] = None,
         search_query: Optional[str] = None,
+        include_invalid: bool = False,
         limit: int = 100,
         offset: int = 0,
         user_id: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         stmt = select(PYQ)
 
+        if not include_invalid:
+            stmt = stmt.where(PYQ.quality_status == "valid", PYQ.is_verified == True)
+
+        if question_type:
+            stmt = stmt.where(PYQ.question_type == question_type)
         if exam_name:
             stmt = stmt.where(PYQ.exam_name.ilike(f"%{exam_name}%"))
         if year:
@@ -67,6 +74,8 @@ class PYQRepository:
                 "source": p.source,
                 "language": p.language or "en",
                 "is_verified": p.is_verified if p.is_verified is not None else True,
+                "question_type": getattr(p, "question_type", "syllabus_practice") or "syllabus_practice",
+                "quality_status": getattr(p, "quality_status", "valid") or "valid",
                 "question_text": p.question_text,
                 "options": p.options,
                 "correct_answer": p.correct_answer,
@@ -125,6 +134,9 @@ class PYQRepository:
                 "source": p.source,
                 "language": p.language or "en",
                 "is_verified": p.is_verified if p.is_verified is not None else True,
+                "question_type": getattr(p, "question_type", "syllabus_practice") or "syllabus_practice",
+                "quality_status": getattr(p, "quality_status", "valid") or "valid",
+                "rejection_reason": getattr(p, "rejection_reason", None),
                 "question_text": p.question_text,
                 "options": p.options,
                 "correct_answer": p.correct_answer,
@@ -137,28 +149,28 @@ class PYQRepository:
         ]
 
     def get_filter_options(self, exam_name: Optional[str] = None) -> Dict[str, Any]:
-        base = select(PYQ)
+        base = select(PYQ).where(PYQ.quality_status == "valid", PYQ.is_verified == True)
         if exam_name:
             base = base.where(PYQ.exam_name.ilike(f"%{exam_name}%"))
 
-        exams = [r[0] for r in self.db.execute(select(distinct(PYQ.exam_name)).order_by(PYQ.exam_name)).all() if r[0]]
+        exams = [r[0] for r in self.db.execute(select(distinct(PYQ.exam_name)).where(PYQ.quality_status == "valid", PYQ.is_verified == True).order_by(PYQ.exam_name)).all() if r[0]]
 
-        years_stmt = select(distinct(PYQ.year))
+        years_stmt = select(distinct(PYQ.year)).where(PYQ.quality_status == "valid", PYQ.is_verified == True)
         if exam_name:
             years_stmt = years_stmt.where(PYQ.exam_name.ilike(f"%{exam_name}%"))
         years = [r[0] for r in self.db.execute(years_stmt.order_by(PYQ.year.desc())).all() if r[0]]
 
-        subjects_stmt = select(distinct(PYQ.subject)).where(PYQ.subject.is_not(None))
+        subjects_stmt = select(distinct(PYQ.subject)).where(PYQ.subject.is_not(None), PYQ.quality_status == "valid", PYQ.is_verified == True)
         if exam_name:
             subjects_stmt = subjects_stmt.where(PYQ.exam_name.ilike(f"%{exam_name}%"))
         subjects = [r[0] for r in self.db.execute(subjects_stmt.order_by(PYQ.subject)).all() if r[0]]
 
-        topics_stmt = select(distinct(PYQ.topic)).where(PYQ.topic.is_not(None))
+        topics_stmt = select(distinct(PYQ.topic)).where(PYQ.topic.is_not(None), PYQ.quality_status == "valid", PYQ.is_verified == True)
         if exam_name:
             topics_stmt = topics_stmt.where(PYQ.exam_name.ilike(f"%{exam_name}%"))
         topics = [r[0] for r in self.db.execute(topics_stmt.order_by(PYQ.topic)).all() if r[0]]
 
-        count_stmt = select(func.count(PYQ.id))
+        count_stmt = select(func.count(PYQ.id)).where(PYQ.quality_status == "valid", PYQ.is_verified == True)
         if exam_name:
             count_stmt = count_stmt.where(PYQ.exam_name.ilike(f"%{exam_name}%"))
         total = self.db.execute(count_stmt).scalar() or 0

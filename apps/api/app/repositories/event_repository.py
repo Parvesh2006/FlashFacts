@@ -133,11 +133,13 @@ class EventRepository:
             )
         )
 
+        non_exam_domains = ["Entertainment", "Crime", "Lifestyle", "Gossip", "Cinema"]
+        # Exam-eligible filter is universal for all candidate feeds and search
+        query = query.filter(Event.is_exam_eligible.is_(True))
         if domain:
             query = query.filter(Event.domain.ilike(domain))
         else:
             # Exclude non-exam domains from default competitive-exam current-affairs feed
-            non_exam_domains = ["Entertainment", "Crime", "Lifestyle", "Gossip", "Cinema"]
             query = query.filter(~Event.domain.in_(non_exam_domains))
         if event_date:
             query = query.filter(Event.event_date == event_date)
@@ -253,8 +255,13 @@ class EventRepository:
                 ])
             query = query.filter(or_(*term_conditions))
 
+        non_exam_domains = ["Entertainment", "Crime", "Lifestyle", "Gossip", "Cinema"]
+        # Exam-eligible filter is universal for all candidate feeds and search
+        query = query.filter(Event.is_exam_eligible.is_(True))
         if domain:
             query = query.filter(Event.domain.ilike(domain))
+        else:
+            query = query.filter(~Event.domain.in_(non_exam_domains))
         if event_date:
             query = query.filter(Event.event_date == event_date)
         if start_date:
@@ -383,11 +390,20 @@ class EventRepository:
             import logging
             logging.exception("Error building exam_intelligence response: %s", e)
             exam_intel_resp = None
+        from app.services.content_cleaner import ContentCleaningService
+        clean_title = ContentCleaningService.clean_html(event.title or "")
+        clean_summary = ContentCleaningService.build_clean_summary(clean_title, event.summary or "")
+        clean_summary = ContentCleaningService.clean_html(clean_summary)
+
         resp_dict = {
             "id": event.id,
-            "title": event.title or "",
-            "summary": event.summary or "",
+            "title": clean_title,
+            "summary": clean_summary,
             "domain": event.domain,
+            "is_exam_eligible": getattr(event, "is_exam_eligible", True),
+            "rejection_reason": getattr(event, "rejection_reason", None),
+            "inclusion_reason": getattr(event, "inclusion_reason", None),
+            "syllabus_topic": getattr(event, "syllabus_topic", None),
             "event_type": event.event_type,
             "event_date": event.event_date,
             "published_at": published_at,

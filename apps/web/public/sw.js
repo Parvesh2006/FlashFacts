@@ -1,5 +1,5 @@
 /* FlashFacts Service Worker - Offline Fact Jumper Coordinator */
-const CACHE_NAME = 'flashfacts-offline-v1';
+const CACHE_NAME = 'flashfacts-offline-v2';
 
 const PRECACHE_ASSETS = [
   '/offline.html',

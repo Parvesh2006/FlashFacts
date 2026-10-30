@@ -359,19 +359,12 @@ class ExamClassificationService:
         imp_score: int,
     ) -> Tuple[int, str, str]:
         """Return (score 0-100, level string, explanation string)."""
-        if domain == "Crime":
-            landmark_legal_words = [
-                "supreme court", "high court", "constitution bench", "constitutional bench",
-                "landmark judgment", "law commission", "criminal law reform",
-                "bharatiya nyaya sanhita", "bns", "ipc amendment",
-                "உச்ச நீதிமன்றம்", "உயர் நீதிமன்றம்", "அரசியலமைப்பு", "நீதிபதிகள் அமர்வு",
-                "வரலாற்று சிறப்புமிக்க தீர்ப்பு", "சட்டத்திருத்தம்", "சட்ட திருத்தம்"
-            ]
-            has_landmark_legal = any(w in text_lower for w in landmark_legal_words)
-            if not has_landmark_legal:
-                return 10, "NOT_RELEVANT", f"Routine local incident/crime without broader {exam_type} competitive exam or syllabus applicability."
+        from app.services.news_relevance_service import NewsRelevanceService
+        relevance_res = NewsRelevanceService.evaluate(text_lower, "", domain=domain)
+        if not relevance_res.is_eligible:
+            return min(15, relevance_res.relevance_score), "NOT_RELEVANT", f"Excluded: {relevance_res.rejection_reason}"
 
-        score = 40  # baseline
+        score = max(40, relevance_res.relevance_score)
 
         if exam_type == "TNPSC":
             if geo_level == "TN_STATE" or state == "TN":

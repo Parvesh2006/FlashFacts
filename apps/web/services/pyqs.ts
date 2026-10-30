@@ -12,6 +12,9 @@ export interface PYQ {
   source?: string;
   language: string;
   is_verified: boolean;
+  question_type?: "verified_pyq" | "syllabus_practice" | "current_affairs" | "invalid" | string;
+  quality_status?: "valid" | "invalid" | "needs_review" | string;
+  rejection_reason?: string;
   question_text: string;
   options: string[];
   correct_answer: string;
@@ -57,6 +60,8 @@ export interface PYQPaper {
   availability_status: string;
   download_count: number;
   has_local_file: boolean;
+  last_verified_at?: string;
+  source_status?: string;
   created_at: string;
   updated_at: string;
 }
@@ -74,6 +79,7 @@ export interface PYQPaperFilterOptions {
   years: number[];
   subjects: string[];
   languages: string[];
+  availability_statuses?: string[];
 }
 
 export async function fetchPYQs(params?: {
@@ -81,6 +87,8 @@ export async function fetchPYQs(params?: {
   year?: number;
   subject?: string;
   topic?: string;
+  type?: string;
+  include_invalid?: boolean;
   q?: string;
   limit?: number;
   offset?: number;
@@ -110,6 +118,7 @@ export async function fetchPYQPapers(params?: {
   year?: number;
   subject?: string;
   language?: string;
+  availability?: string;
   q?: string;
   limit?: number;
   offset?: number;

@@ -49,6 +49,12 @@ export interface Event {
   // Exam Intelligence Core (Phase 1)
   exam_intelligence?: EventExamIntelligenceData;
 
+  // News Relevance & Syllabus Quality
+  is_exam_eligible?: boolean;
+  rejection_reason?: string;
+  inclusion_reason?: string;
+  syllabus_topic?: string;
+
   entities?: { id: number; name: string; entity_type: string }[];
   source_count?: number;
   sources?: import("./source").Source[];

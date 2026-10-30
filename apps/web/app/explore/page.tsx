@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Compass, ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
+import { Compass, ChevronLeft, ChevronRight, SlidersHorizontal, ArrowUpDown } from "lucide-react";
 import { EventFilters } from "@/components/events/event-filters";
 import { EventList } from "@/components/events/event-list";
 import { SkeletonGrid } from "@/components/common/skeleton-loader";
@@ -68,7 +68,7 @@ function ExploreContent() {
       setEvents(res.events || []);
       setTotal(res.total || 0);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to load events.");
+      setError(err instanceof Error ? err.message : "Failed to load events from server.");
     } finally {
       setLoading(false);
     }
@@ -99,27 +99,48 @@ function ExploreContent() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-6xl mx-auto page-enter">
       <BackButton fallbackHref="/" />
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+      {/* Editorial Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border)] pb-5">
         <div>
-          <div className="eyebrow flex items-center gap-2 mb-1">
-            <Compass className="w-4 h-4" />
-            <span>Event Explorer</span>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="badge-editorial text-xs text-[var(--accent)] border-[var(--accent)] font-semibold">
+              INTELLIGENCE ARCHIVE
+            </span>
+            <span className="text-xs text-[var(--text-muted)]">• Comprehensive Feed</span>
           </div>
-          <h1 className="headline text-3xl md:text-4xl">
+          <h1 className="headline text-3xl md:text-4xl text-[var(--text-primary)] font-bold tracking-tight">
             Explore Current Affairs
           </h1>
-          <p className="body-copy text-sm">
-            Filter, search, and navigate current affairs events by category, date range, or keywords.
+          <p className="body-copy text-sm text-[var(--text-secondary)] mt-1.5 max-w-2xl">
+            Browse through classified exam intelligence records with domain filtering, exact dates, and importance sorting.
           </p>
         </div>
 
-        <div className="soft-badge flex items-center gap-2 text-xs font-mono px-3 py-1.5">
-          <SlidersHorizontal className="w-3.5 h-3.5 accent-mark" />
-          <span>{total} Total Matched</span>
+        <div className="flex items-center gap-3">
+          <div className="badge-editorial px-3 py-1.5 flex items-center gap-2 bg-[var(--surface-muted)] text-[var(--text-primary)] border-[var(--border)]">
+            <SlidersHorizontal className="w-3.5 h-3.5 text-[var(--accent)]" />
+            <span className="font-semibold">{total}</span>
+            <span className="text-[var(--text-muted)]">Verified Items</span>
+          </div>
+
+          <div className="flex items-center gap-2 bg-[var(--surface)] border border-[var(--border)] rounded-lg px-2.5 py-1">
+            <ArrowUpDown className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+            <select
+              value={sort}
+              onChange={(e) => {
+                setSort(e.target.value);
+                updateUrlParams({ sort: e.target.value, offset: 0 });
+              }}
+              className="bg-transparent text-xs text-[var(--text-primary)] font-medium focus:outline-none cursor-pointer"
+              aria-label="Sort events"
+            >
+              <option value="latest">Latest First</option>
+              <option value="important">Most Exam-Relevant</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -149,37 +170,23 @@ function ExploreContent() {
           <EventList
             events={events}
             emptyTitle="No current affairs found"
-            emptyDescription="No events match your requested filter parameters."
+            emptyDescription="No events match your requested filter parameters. Try clearing date constraints or choosing a different domain."
             onRetry={fetchExploreEvents}
           />
 
-        <div className="flex items-center gap-3">
-          <label className="meta-text">Sort</label>
-          <select
-            value={sort}
-            onChange={(e) => {
-              setSort(e.target.value);
-              updateUrlParams({ sort: e.target.value, offset: 0 });
-            }}
-            className="control-input px-3 py-1.5 text-sm"
-          >
-            <option value="latest">Latest</option>
-            <option value="important">Most Important</option>
-          </select>
-        </div>
-
           {/* Pagination Controls */}
           {total > limitParam && (
-            <div className="flex items-center justify-between pt-4 border-t font-mono text-xs text-[var(--text-secondary)]">
-              <span>
-                Showing page {currentPage} of {totalPages} ({total} events)
+            <div className="editorial-card p-4 flex flex-col sm:flex-row items-center justify-between gap-4 border border-[var(--border)]">
+              <span className="text-xs text-[var(--text-secondary)] font-medium">
+                Page <strong className="text-[var(--text-primary)]">{currentPage}</strong> of{" "}
+                <strong className="text-[var(--text-primary)]">{totalPages}</strong> ({total} total entries)
               </span>
 
               <div className="flex items-center gap-2">
                 <button
                   onClick={handlePrevPage}
                   disabled={offsetParam === 0}
-                  className="control flex items-center gap-1 px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="button-base button-secondary px-3 py-1.5 text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <ChevronLeft className="w-4 h-4" />
                   <span>Previous</span>
@@ -188,7 +195,7 @@ function ExploreContent() {
                 <button
                   onClick={handleNextPage}
                   disabled={offsetParam + limitParam >= total}
-                  className="control flex items-center gap-1 px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="button-base button-secondary px-3 py-1.5 text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <span>Next</span>
                   <ChevronRight className="w-4 h-4" />

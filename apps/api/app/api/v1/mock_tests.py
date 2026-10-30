@@ -20,6 +20,13 @@ from app.services.mock_test_service import MockTestService
 router = APIRouter()
 
 
+@router.get("/eligible-counts")
+def get_eligible_counts(db: Session = Depends(get_db)):
+    """Return available verified question counts and supported test lengths by exam."""
+    service = MockTestService(db)
+    return service.get_eligible_counts()
+
+
 @router.get("/", response_model=List[MockTestSummary])
 def list_mock_tests(
     exam_name: Optional[str] = None,
@@ -47,18 +54,29 @@ def list_attempts(
 
 
 @router.post("/", response_model=MockTestResponse, status_code=201)
-def create_mock_test(test_in: MockTestCreate, db: Session = Depends(get_db)):
+def create_mock_test(
+    test_in: MockTestCreate,
+    user: Optional[User] = Depends(get_current_user_optional),
+    db: Session = Depends(get_db),
+):
     """Create a new dynamically generated mock test based on authentic PYQs and exam-relevant current affairs."""
     service = MockTestService(db)
-    test = service.create_mock_test(
-        exam_name=test_in.exam_name,
-        total_questions=test_in.total_questions,
-        time_limit_minutes=test_in.time_limit_minutes,
-        negative_marking=test_in.negative_marking,
-        include_pyqs=test_in.include_pyqs,
-        include_events=test_in.include_events,
-        domain=test_in.domain,
-    )
+    try:
+        test = service.create_mock_test(
+            exam_name=test_in.exam_name,
+            total_questions=test_in.total_questions,
+            time_limit_minutes=test_in.time_limit_minutes,
+            negative_marking=test_in.negative_marking,
+            include_pyqs=test_in.include_pyqs,
+            include_events=test_in.include_events,
+            domain=test_in.domain,
+            user_id=user.id if user else None,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc),
+        )
 
     if test.status != "ready":
         raise HTTPException(
@@ -85,6 +103,7 @@ def create_mock_test(test_in: MockTestCreate, db: Session = Depends(get_db)):
     return MockTestResponse(
         id=test.id,
         exam_name=test.exam_name,
+        title=getattr(test, "title", None),
         domain=test.domain,
         language=test.language,
         difficulty=test.difficulty,
@@ -122,6 +141,7 @@ def get_mock_test(test_id: str, db: Session = Depends(get_db)):
     return MockTestResponse(
         id=test.id,
         exam_name=test.exam_name,
+        title=getattr(test, "title", None),
         domain=test.domain,
         language=test.language,
         difficulty=test.difficulty,
@@ -148,7 +168,7 @@ def submit_mock_test_attempt(
 ):
     """
     Submit test answers, calculate server-side score with negative marking,
-    and automatically log mistakes into the student's Mistake Book.
+    and automatically log mistakes into the student's Mistake Book if authenticated.
     """
     service = MockTestService(db)
 

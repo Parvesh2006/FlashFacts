@@ -7,38 +7,34 @@ import {
   RotateCcw,
   Volume2,
   VolumeX,
-  Sparkles,
   ArrowUp,
   ArrowDown,
   Info,
   Pause,
 } from "lucide-react";
 
-// Micro-facts displayed at every 100-point milestone
-const EXAM_FACTS = [
-  "The Preamble was amended only once — by the 42nd Amendment Act in 1976.",
-  "Keezhadi excavations near Madurai prove an urban civilization on the Vaigai river banks dating back to the 6th century BCE.",
-  "Article 32 was termed the 'Heart and Soul of the Constitution' by Dr. B.R. Ambedkar.",
-  "India's first satellite, Aryabhata, was launched on 19 April 1975.",
-  "The Kudavolai electoral system was practiced by the Cholas as recorded in the Uttaramerur inscriptions.",
-  "The Western Ghats is one of the world's eight 'hottest hotspots' of biological diversity.",
-  "The Swadeshi Steam Navigation Company was established by V.O. Chidambaram Pillai at Tuticorin in 1906.",
-  "Project Tiger was launched by the Government of India in April 1973 from Corbett National Park.",
-  "The Right to Education became a Fundamental Right via the 86th Constitutional Amendment Act, 2002 (Article 21A).",
-  "The Reserve Bank of India was established on April 1, 1935 under the Reserve Bank of India Act, 1934.",
-  "Article 17 of the Constitution of India abolishes 'Untouchability' and forbids its practice in any form.",
-  "The 73rd Constitutional Amendment Act, 1992 inserted Part IX and the 11th Schedule for Panchayati Raj.",
-  "ISRO was founded on August 15, 1969 under the visionary leadership of Dr. Vikram Sarabhai.",
-  "The Comptroller and Auditor General (CAG) of India is appointed under Article 148 of the Constitution.",
-  "Maneka Gandhi v. Union of India (1978) established that procedure under Article 21 must be just, fair and reasonable.",
-];
+// --- Canvas & Ground Coordinates: Single Source of Truth ---
+export const GAME_CANVAS_WIDTH = 840;
+export const GAME_CANVAS_HEIGHT = 320;
+export const GAME_GROUND_OFFSET = 40;
+export const GAME_GROUND_Y = GAME_CANVAS_HEIGHT - GAME_GROUND_OFFSET; // Exactly 280
+export const PLAYER_INITIAL_X = 80;
+export const PLAYER_HEIGHT_STAND = 52;
+export const PLAYER_HEIGHT_DUCK = 22;
 
-interface Obstacle {
+export type ObstacleType =
+  | "ground_hurdle"
+  | "ground_books"
+  | "bird_low"
+  | "bird_mid"
+  | "bird_high";
+
+export interface Obstacle {
   x: number;
   y: number;
   width: number;
   height: number;
-  type: "ground_hurdle" | "ground_books" | "overhead_drone" | "overhead_banner";
+  type: ObstacleType;
   passed?: boolean;
 }
 
@@ -54,11 +50,29 @@ interface Particle {
 
 const STORAGE_KEY_HIGH_SCORE = "flashfacts_fact_jumper_highscore";
 const STORAGE_KEY_SOUND = "flashfacts_fact_jumper_sound";
-const INITIAL_GAME_SPEED = 6.5;
-const MAX_GAME_SPEED = 12.5;
 
-function getGameSpeed(score: number): number {
-  return Math.min(MAX_GAME_SPEED, INITIAL_GAME_SPEED + Math.max(0, score) * 0.0055);
+export interface GamePhysicsConfig {
+  initialSpeed: number;        // Comfortable initial speed matching early Chrome T-Rex
+  maxSpeed: number;            // Capped upper limit to remain playable
+  acceleration: number;        // Gradual speed increment per score point
+  gravity: number;             // Downward acceleration per tick
+  jumpImpulse: number;         // Controlled vertical impulse (predictable arc, stays inside viewport)
+  groundOffset: number;        // Distance from canvas bottom to ground line
+  minObstacleGap: number;      // Base minimum spacing between obstacles
+}
+
+export const DEFAULT_GAME_CONFIG: GamePhysicsConfig = {
+  initialSpeed: 4.8,
+  maxSpeed: 9.5,
+  acceleration: 0.0035,
+  gravity: 0.60,
+  jumpImpulse: -10.2,
+  groundOffset: GAME_GROUND_OFFSET,
+  minObstacleGap: 340,
+};
+
+function getGameSpeed(score: number, config: GamePhysicsConfig = DEFAULT_GAME_CONFIG): number {
+  return Math.min(config.maxSpeed, config.initialSpeed + Math.max(0, score) * config.acceleration);
 }
 
 interface PlayerState {
@@ -72,10 +86,10 @@ interface PlayerState {
   runFrame: number;
 }
 
+// --- Animated Stickman Drawing ---
 function drawStickman(
   ctx: CanvasRenderingContext2D,
   p: PlayerState,
-  groundY: number,
   time: number,
   state: string,
   distance: number
@@ -189,14 +203,14 @@ function drawStickman(
     ctx.lineTo(hipX, hipY);
     ctx.stroke();
 
-    // Running Legs
+    // Running Legs (feet clamped to p.y = GAME_GROUND_Y)
     const legAngle1 = isRunning ? Math.sin(runCycle) * 0.7 : 0.1;
     const legAngle2 = isRunning ? Math.sin(runCycle + Math.PI) * 0.7 : -0.1;
 
     const knee1X = hipX + Math.sin(legAngle1) * 12;
     const knee1Y = hipY + Math.cos(legAngle1) * 11;
     const foot1X = knee1X + Math.sin(legAngle1 + 0.3) * 11;
-    const foot1Y = Math.min(groundY, knee1Y + Math.cos(legAngle1 + 0.3) * 10);
+    const foot1Y = Math.min(p.y, knee1Y + Math.cos(legAngle1 + 0.3) * 10);
 
     ctx.beginPath();
     ctx.moveTo(hipX, hipY);
@@ -207,7 +221,7 @@ function drawStickman(
     const knee2X = hipX + Math.sin(legAngle2) * 12;
     const knee2Y = hipY + Math.cos(legAngle2) * 11;
     const foot2X = knee2X + Math.sin(legAngle2 + 0.3) * 11;
-    const foot2Y = Math.min(groundY, knee2Y + Math.cos(legAngle2 + 0.3) * 10);
+    const foot2Y = Math.min(p.y, knee2Y + Math.cos(legAngle2 + 0.3) * 10);
 
     ctx.beginPath();
     ctx.moveTo(hipX, hipY);
@@ -232,7 +246,107 @@ function drawStickman(
   ctx.restore();
 }
 
-export function FactJumperGame() {
+// --- Flying Bird Obstacle Drawing (2-Frame Flapping Wing Animation) ---
+function drawBird(
+  ctx: CanvasRenderingContext2D,
+  obs: Obstacle,
+  time: number
+) {
+  ctx.save();
+  ctx.fillStyle = "#0F172A"; // High contrast crisp black
+  ctx.strokeStyle = "#0F172A";
+  ctx.lineWidth = 2.2;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  const bx = obs.x;
+  const by = obs.y;
+
+  // 2-frame wing flap based on time: ~140ms per frame
+  const flapFrame = Math.floor(time / 140) % 2;
+
+  // 1. Sleek aerodynamic bird body (flying towards left)
+  ctx.beginPath();
+  ctx.moveTo(bx + 8, by + 11);
+  ctx.lineTo(bx + 26, by + 9);
+  ctx.lineTo(bx + 32, by + 11);
+  ctx.lineTo(bx + 24, by + 16);
+  ctx.lineTo(bx + 11, by + 15);
+  ctx.closePath();
+  ctx.fill();
+
+  // 2. Beak (pointing forward/left towards player)
+  ctx.beginPath();
+  ctx.moveTo(bx + 9, by + 9);
+  ctx.lineTo(bx + 1, by + 12);
+  ctx.lineTo(bx + 9, by + 14);
+  ctx.closePath();
+  ctx.fill();
+
+  // 3. Eye
+  ctx.fillStyle = "#FFFFFF";
+  ctx.beginPath();
+  ctx.arc(bx + 7, by + 11, 1.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 4. Wings (2 distinct flapping positions)
+  ctx.fillStyle = "#0F172A";
+  ctx.strokeStyle = "#0F172A";
+  ctx.lineWidth = 2.4;
+
+  if (flapFrame === 0) {
+    // Frame 0: Wings UP
+    ctx.beginPath();
+    ctx.moveTo(bx + 14, by + 10);
+    ctx.lineTo(bx + 11, by + 2); // Wing tip high
+    ctx.lineTo(bx + 19, by + 4);
+    ctx.lineTo(bx + 22, by + 10);
+    ctx.closePath();
+    ctx.fill();
+
+    // Far wing peek
+    ctx.beginPath();
+    ctx.moveTo(bx + 18, by + 9);
+    ctx.lineTo(bx + 17, by + 4);
+    ctx.lineTo(bx + 23, by + 6);
+    ctx.stroke();
+  } else {
+    // Frame 1: Wings DOWN
+    ctx.beginPath();
+    ctx.moveTo(bx + 14, by + 12);
+    ctx.lineTo(bx + 11, by + 20); // Wing tip low
+    ctx.lineTo(bx + 19, by + 18);
+    ctx.lineTo(bx + 22, by + 12);
+    ctx.closePath();
+    ctx.fill();
+
+    // Far wing peek
+    ctx.beginPath();
+    ctx.moveTo(bx + 18, by + 13);
+    ctx.lineTo(bx + 17, by + 18);
+    ctx.lineTo(bx + 23, by + 16);
+    ctx.stroke();
+  }
+
+  // 5. Tail feathers
+  ctx.beginPath();
+  ctx.moveTo(bx + 31, by + 10);
+  ctx.lineTo(bx + 36, by + 8);
+  ctx.moveTo(bx + 31, by + 12);
+  ctx.lineTo(bx + 36, by + 14);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+export interface FactJumperGameProps {
+  config?: Partial<GamePhysicsConfig>;
+  autoStart?: boolean;
+  onReturnToApp?: () => void;
+}
+
+export function FactJumperGame({ config, autoStart = true, onReturnToApp }: FactJumperGameProps = {}) {
+  const physics = { ...DEFAULT_GAME_CONFIG, ...config };
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // High score and sound state
@@ -240,23 +354,22 @@ export function FactJumperGame() {
   const [highScore, setHighScore] = useState<number>(0);
   const [gameState, setGameState] = useState<"IDLE" | "RUNNING" | "PAUSED" | "GAMEOVER">("IDLE");
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
-  const [activeFact, setActiveFact] = useState<string | null>(null);
   const [isDuckingState, setIsDuckingState] = useState<boolean>(false);
 
   // Mutable game state held in refs for 60fps render loop
   const gameStateRef = useRef<"IDLE" | "RUNNING" | "PAUSED" | "GAMEOVER">("IDLE");
   const scoreRef = useRef<number>(0);
   const highScoreRef = useRef<number>(0);
-  const speedRef = useRef<number>(INITIAL_GAME_SPEED);
+  const speedRef = useRef<number>(physics.initialSpeed);
   const distanceRef = useRef<number>(0);
-  const lastFactMilestoneRef = useRef<number>(0);
+  const lastMilestoneRef = useRef<number>(0);
 
   // Player physics
-  const playerRef = useRef({
-    x: 80,
-    y: 0,
+  const playerRef = useRef<PlayerState>({
+    x: PLAYER_INITIAL_X,
+    y: GAME_GROUND_Y,
     width: 24,
-    height: 52,
+    height: PLAYER_HEIGHT_STAND,
     vy: 0,
     isGrounded: true,
     isDucking: false,
@@ -265,7 +378,7 @@ export function FactJumperGame() {
 
   const obstaclesRef = useRef<Obstacle[]>([]);
   const particlesRef = useRef<Particle[]>([]);
-  const nextSpawnDistanceRef = useRef<number>(300);
+  const nextSpawnDistanceRef = useRef<number>(320);
   const animFrameIdRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(0);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -374,30 +487,27 @@ export function FactJumperGame() {
     });
   };
 
-  // Start game
+  // Start game - firmly anchor to GAME_GROUND_Y
   const startGame = useCallback(() => {
     gameStateRef.current = "RUNNING";
     setGameState("RUNNING");
     scoreRef.current = 0;
     setScore(0);
-    speedRef.current = INITIAL_GAME_SPEED;
+    speedRef.current = physics.initialSpeed;
     distanceRef.current = 0;
-    lastFactMilestoneRef.current = 0;
+    lastMilestoneRef.current = 0;
     obstaclesRef.current = [];
     particlesRef.current = [];
     nextSpawnDistanceRef.current = 320;
-    setActiveFact(null);
 
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const groundY = canvas.height - 40;
-      playerRef.current.y = groundY;
-      playerRef.current.vy = 0;
-      playerRef.current.isGrounded = true;
-      playerRef.current.isDucking = false;
-      setIsDuckingState(false);
-    }
-  }, []);
+    // Firm ground coordinate guarantee
+    playerRef.current.x = PLAYER_INITIAL_X;
+    playerRef.current.y = GAME_GROUND_Y;
+    playerRef.current.vy = 0;
+    playerRef.current.isGrounded = true;
+    playerRef.current.isDucking = false;
+    setIsDuckingState(false);
+  }, [physics.initialSpeed]);
 
   // Reset after game over
   const resetGame = useCallback(() => {
@@ -406,8 +516,10 @@ export function FactJumperGame() {
 
   // Start running as soon as the game page is ready.
   useEffect(() => {
-    startGame();
-  }, [startGame]);
+    if (autoStart) {
+      startGame();
+    }
+  }, [startGame, autoStart]);
 
   // Resume game
   const resumeGame = useCallback(() => {
@@ -433,7 +545,7 @@ export function FactJumperGame() {
 
     const p = playerRef.current;
     if (p.isGrounded && !p.isDucking) {
-      p.vy = -13.2;
+      p.vy = physics.jumpImpulse;
       p.isGrounded = false;
       playSound("jump");
 
@@ -441,7 +553,7 @@ export function FactJumperGame() {
       for (let i = 0; i < 5; i++) {
         particlesRef.current.push({
           x: p.x + 8 + (Math.random() * 8 - 4),
-          y: p.y,
+          y: GAME_GROUND_Y,
           vx: -(Math.random() * 2 + 1),
           vy: -(Math.random() * 2),
           alpha: 0.7,
@@ -450,7 +562,7 @@ export function FactJumperGame() {
         });
       }
     }
-  }, [playSound, startGame, resetGame, resumeGame]);
+  }, [playSound, startGame, resetGame, resumeGame, physics.jumpImpulse]);
 
   // Trigger duck
   const setDucking = useCallback((ducking: boolean) => {
@@ -481,7 +593,6 @@ export function FactJumperGame() {
   // Keyboard controls with scroll prevention and fair repeat blocking
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Prevent browser from scrolling on arrow keys and space when interacting with the game
       if (["Space", "ArrowUp", "ArrowDown", "KeyW", "KeyS", "KeyP", "KeyR"].includes(e.code)) {
         e.preventDefault();
       }
@@ -518,24 +629,33 @@ export function FactJumperGame() {
     };
   }, [triggerJump, setDucking, togglePause, resetGame]);
 
-  // Main canvas rendering & animation loop
+  // Main canvas rendering & animation loop with responsive resize guarantee
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    // Retina / High-DPI display scaling with consistent logical dimensions
+    const configureCanvas = () => {
+      const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+      canvas.width = GAME_CANVAS_WIDTH * dpr;
+      canvas.height = GAME_CANVAS_HEIGHT * dpr;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.scale(dpr, dpr);
+      }
+      // Re-anchor grounded player on resize
+      if (playerRef.current.isGrounded) {
+        playerRef.current.y = GAME_GROUND_Y;
+        playerRef.current.vy = 0;
+      }
+    };
+
+    configureCanvas();
+    window.addEventListener("resize", configureCanvas);
+
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-
-    // Retina display scaling
-    const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
-    const logicalWidth = 840;
-    const logicalHeight = 320;
-
-    canvas.width = logicalWidth * dpr;
-    canvas.height = logicalHeight * dpr;
-    ctx.scale(dpr, dpr);
-
-    const groundY = logicalHeight - 40;
-    playerRef.current.y = groundY;
 
     // Detect user reduced motion preference
     const prefersReducedMotion =
@@ -546,7 +666,7 @@ export function FactJumperGame() {
       animFrameIdRef.current = requestAnimationFrame(render);
 
       if (!lastTimeRef.current) lastTimeRef.current = currentTime;
-      const frameScale = Math.min(3, Math.max(0, (currentTime - lastTimeRef.current) / (1000 / 60)));
+      const frameScale = Math.min(2.5, Math.max(0.2, (currentTime - lastTimeRef.current) / (1000 / 60)));
       lastTimeRef.current = currentTime;
 
       const state = gameStateRef.current;
@@ -554,18 +674,17 @@ export function FactJumperGame() {
       const p = playerRef.current;
 
       // 1. Dynamic background shade transition between white & light grey
-      // Subtle oscillation between #FFFFFF, #F8F9FA, #F1F3F5, #E9ECEF
       let bgShade = 255;
       if (!prefersReducedMotion) {
         bgShade = Math.floor(248 + Math.sin(distanceRef.current * 0.0025) * 7);
       }
       ctx.fillStyle = `rgb(${bgShade}, ${bgShade}, ${bgShade})`;
-      ctx.fillRect(0, 0, logicalWidth, logicalHeight);
+      ctx.fillRect(0, 0, GAME_CANVAS_WIDTH, GAME_CANVAS_HEIGHT);
 
-      // Draw subtle background grid/pattern dots for depth
+      // Draw subtle background grid dots for depth
       ctx.fillStyle = "rgba(100, 116, 139, 0.07)";
-      for (let gx = 0; gx < logicalWidth; gx += 40) {
-        for (let gy = 0; gy < groundY; gy += 40) {
+      for (let gx = 0; gx < GAME_CANVAS_WIDTH; gx += 40) {
+        for (let gy = 0; gy < GAME_GROUND_Y; gy += 40) {
           ctx.beginPath();
           ctx.arc(gx, gy, 1, 0, Math.PI * 2);
           ctx.fill();
@@ -576,18 +695,18 @@ export function FactJumperGame() {
       ctx.strokeStyle = "#1E293B";
       ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.moveTo(0, groundY);
-      ctx.lineTo(logicalWidth, groundY);
+      ctx.moveTo(0, GAME_GROUND_Y);
+      ctx.lineTo(GAME_CANVAS_WIDTH, GAME_GROUND_Y);
       ctx.stroke();
 
       // Moving track ticks
       ctx.strokeStyle = "rgba(100, 116, 139, 0.4)";
       ctx.lineWidth = 1.5;
       const trackOffset = (distanceRef.current % 30);
-      for (let tx = -trackOffset; tx < logicalWidth; tx += 30) {
+      for (let tx = -trackOffset; tx < GAME_CANVAS_WIDTH; tx += 30) {
         ctx.beginPath();
-        ctx.moveTo(tx, groundY + 4);
-        ctx.lineTo(tx + 12, groundY + 4);
+        ctx.moveTo(tx, GAME_GROUND_Y + 4);
+        ctx.lineTo(tx + 12, GAME_GROUND_Y + 4);
         ctx.stroke();
       }
 
@@ -605,14 +724,12 @@ export function FactJumperGame() {
           safeSetStorage(STORAGE_KEY_HIGH_SCORE, String(currentPoints));
         }
 
-        speedRef.current = getGameSpeed(currentPoints);
+        speedRef.current = getGameSpeed(currentPoints, physics);
 
-        // Milestone Fact Announcement every 100 points
+        // Milestone celebration every 100 points
         const currentHundred = Math.floor(currentPoints / 100);
-        if (currentHundred > lastFactMilestoneRef.current && currentHundred > 0) {
-          lastFactMilestoneRef.current = currentHundred;
-          const factIndex = (currentHundred - 1) % EXAM_FACTS.length;
-          setActiveFact(EXAM_FACTS[factIndex]);
+        if (currentHundred > lastMilestoneRef.current && currentHundred > 0) {
+          lastMilestoneRef.current = currentHundred;
           playSound("score");
 
           // Burst milestone particles
@@ -629,13 +746,16 @@ export function FactJumperGame() {
           }
         }
 
-        // Player physics update
+        // --- Player Physics Update with Firm Ground Clamping ---
         if (!p.isGrounded) {
-          p.vy += 0.65 * frameScale; // Gravity stays consistent across refresh rates.
+          // Mid-air ducking gives responsive fast-fall
+          const currentGravity = p.isDucking ? physics.gravity * 1.5 : physics.gravity;
+          p.vy += currentGravity * frameScale;
           p.y += p.vy * frameScale;
 
-          if (p.y >= groundY) {
-            p.y = groundY;
+          // Landing detection
+          if (p.y >= GAME_GROUND_Y) {
+            p.y = GAME_GROUND_Y;
             p.vy = 0;
             p.isGrounded = true;
 
@@ -643,7 +763,7 @@ export function FactJumperGame() {
             for (let i = 0; i < 4; i++) {
               particlesRef.current.push({
                 x: p.x + 8 + (Math.random() * 8 - 4),
-                y: groundY,
+                y: GAME_GROUND_Y,
                 vx: -(Math.random() * 2 + 1),
                 vy: -(Math.random() * 1.5),
                 alpha: 0.6,
@@ -652,13 +772,17 @@ export function FactJumperGame() {
               });
             }
           }
+        } else {
+          // Absolute guarantee: running player feet stay pinned to GAME_GROUND_Y
+          p.y = GAME_GROUND_Y;
+          p.vy = 0;
         }
 
         // Dust while running on ground
         if (p.isGrounded && Math.random() < 1 - Math.pow(0.75, frameScale)) {
           particlesRef.current.push({
             x: p.x + (p.isDucking ? -5 : 4),
-            y: groundY - 2,
+            y: GAME_GROUND_Y - 2,
             vx: -(speed * 0.4 + Math.random() * 1.5),
             vy: -(Math.random() * 1.2),
             alpha: 0.5,
@@ -667,43 +791,71 @@ export function FactJumperGame() {
           });
         }
 
-        // Spawn obstacles with fair spacing
+        // --- Obstacle Generation: Ground Hurdles, Study Books & Flying Birds ---
         if (distanceRef.current >= nextSpawnDistanceRef.current) {
-          const rand = Math.random();
-          let obsType: Obstacle["type"] = "ground_hurdle";
-          let obsW = 22;
+          let obsType: ObstacleType = "ground_hurdle";
+          let obsW = 24;
           let obsH = 38;
-          let obsY = groundY - obsH;
+          let obsY = GAME_GROUND_Y - obsH;
 
-          // 30% chance for overhead obstacles that require ducking
-          if (rand > 0.7) {
-            obsType = rand > 0.85 ? "overhead_drone" : "overhead_banner";
-            obsW = 38;
-            obsH = 22;
-            // Placed at head level: standing hits it, ducking slides under it!
-            obsY = groundY - 58;
-          } else if (rand > 0.35) {
-            obsType = "ground_books";
-            obsW = 34;
-            obsH = 42;
-            obsY = groundY - obsH;
+          // For the first 30 points: ground obstacles only for onboarding
+          // At score >= 30: fair mix of ground obstacles (55%) and flying birds (45%)
+          if (currentPoints < 30) {
+            const isHurdle = Math.random() > 0.5;
+            obsType = isHurdle ? "ground_hurdle" : "ground_books";
+            obsW = isHurdle ? 24 : 32;
+            obsH = isHurdle ? 38 : 42;
+            obsY = GAME_GROUND_Y - obsH;
+          } else {
+            const rand = Math.random();
+            if (rand < 0.35) {
+              // Ground Hurdle
+              obsType = "ground_hurdle";
+              obsW = 24;
+              obsH = 38;
+              obsY = GAME_GROUND_Y - obsH;
+            } else if (rand < 0.55) {
+              // Stack of Study Books
+              obsType = "ground_books";
+              obsW = 32;
+              obsH = 42;
+              obsY = GAME_GROUND_Y - obsH;
+            } else if (rand < 0.75) {
+              // Bird Mid-Flight: flies at chest/head level -> Player MUST DUCK!
+              obsType = "bird_mid";
+              obsW = 36;
+              obsH = 22;
+              obsY = GAME_GROUND_Y - 58;
+            } else if (rand < 0.90) {
+              // Bird Low-Flight: flies low near ground -> Player MUST JUMP!
+              obsType = "bird_low";
+              obsW = 36;
+              obsH = 22;
+              obsY = GAME_GROUND_Y - 26;
+            } else {
+              // Bird High-Flight: flies high overhead -> Player runs underneath (Jumping hits!)
+              obsType = "bird_high";
+              obsW = 36;
+              obsH = 22;
+              obsY = GAME_GROUND_Y - 76;
+            }
           }
 
           obstaclesRef.current.push({
-            x: logicalWidth + 20,
+            x: GAME_CANVAS_WIDTH + 20,
             y: obsY,
             width: obsW,
             height: obsH,
             type: obsType,
           });
 
-          // Next spawn interval scales with speed for fair reflex windows
-          const minGap = Math.max(300, speed * 52);
-          const randomExtra = 140 + Math.random() * 140;
+          // Dynamic obstacle gap scales with speed for fair reflex windows
+          const minGap = Math.max(physics.minObstacleGap, speed * 58);
+          const randomExtra = 130 + Math.random() * 140;
           nextSpawnDistanceRef.current = distanceRef.current + minGap + randomExtra;
         }
 
-        // Move obstacles and check collisions
+        // Move obstacles and check fair multi-box collisions
         for (let i = obstaclesRef.current.length - 1; i >= 0; i--) {
           const obs = obstaclesRef.current[i];
           obs.x -= speed * frameScale;
@@ -714,12 +866,12 @@ export function FactJumperGame() {
             continue;
           }
 
-          // Accurate Multi-Box Collision Detection
-          // Standing hitbox: width 22, height 52, y from p.y - 52 to p.y
-          // Ducking hitbox: width 34, height 24, y from p.y - 24 to p.y (crouched low)
+          // Accurate Hitboxes:
+          // Standing: width 18, height 50, y from (p.y - 50) to p.y
+          // Ducking: width 32, height 22, y from (p.y - 22) to p.y (crouched low to slide under mid-birds)
           const playerBox = p.isDucking
-            ? { x: p.x - 4, y: p.y - 24, w: 34, h: 24 }
-            : { x: p.x + 2, y: p.y - 52, w: 20, h: 52 };
+            ? { x: p.x - 2, y: p.y - 22, w: 32, h: 22 }
+            : { x: p.x + 3, y: p.y - 50, w: 18, h: 50 };
 
           // Bounding box overlap with 3px grace margin for fair gameplay
           const collision =
@@ -769,26 +921,20 @@ export function FactJumperGame() {
         ctx.globalAlpha = 1.0;
       }
 
-      // 5. Draw Obstacles
+      // 5. Draw Obstacles: Hurdles, Books & Flying Birds
       for (const obs of obstaclesRef.current) {
-        ctx.fillStyle = "#0F172A"; // High contrast solid black
-        ctx.strokeStyle = "#0F172A";
-        ctx.lineWidth = 2;
-
         if (obs.type === "ground_hurdle") {
           // Minimalist Track Hurdle
+          ctx.fillStyle = "#0F172A";
           ctx.beginPath();
-          // Crossbar
           ctx.rect(obs.x, obs.y, obs.width, 7);
           ctx.fill();
-          // Two legs
           ctx.fillRect(obs.x + 2, obs.y + 7, 3, obs.height - 7);
           ctx.fillRect(obs.x + obs.width - 5, obs.y + 7, 3, obs.height - 7);
-          // Ground feet
           ctx.fillRect(obs.x, obs.y + obs.height - 2, 7, 2);
           ctx.fillRect(obs.x + obs.width - 7, obs.y + obs.height - 2, 7, 2);
         } else if (obs.type === "ground_books") {
-          // Stack of 3 Study Books (FlashFacts Exam Theme)
+          // Stack of 3 Study Books
           const bookHeight = obs.height / 3;
           for (let b = 0; b < 3; b++) {
             const by = obs.y + b * bookHeight;
@@ -796,55 +942,29 @@ export function FactJumperGame() {
             const bx = obs.x + (b === 1 ? 2 : 0);
             ctx.fillStyle = "#0F172A";
             ctx.fillRect(bx, by, bw, bookHeight - 2);
-            // Spine highlight
             ctx.fillStyle = "#FFFFFF";
             ctx.fillRect(bx + 2, by + 2, 2, bookHeight - 6);
           }
-        } else if (obs.type === "overhead_drone") {
-          // Flying Exam Surveillance Drone (Overhead obstacle - duck to pass!)
-          // Propeller line
-          ctx.beginPath();
-          ctx.moveTo(obs.x - 4, obs.y + 3);
-          ctx.lineTo(obs.x + obs.width + 4, obs.y + 3);
-          ctx.stroke();
-          // Drone body
-          ctx.fillRect(obs.x + 6, obs.y + 4, obs.width - 12, obs.height - 8);
-          // Blinking warning beacon
-          ctx.fillStyle = Math.floor(currentTime / 200) % 2 === 0 ? "#EF4444" : "#F59E0B";
-          ctx.beginPath();
-          ctx.arc(obs.x + obs.width / 2, obs.y + obs.height / 2, 3, 0, Math.PI * 2);
-          ctx.fill();
-          // Legs
-          ctx.strokeStyle = "#0F172A";
-          ctx.beginPath();
-          ctx.moveTo(obs.x + 8, obs.y + obs.height - 4);
-          ctx.lineTo(obs.x + 6, obs.y + obs.height);
-          ctx.moveTo(obs.x + obs.width - 8, obs.y + obs.height - 4);
-          ctx.lineTo(obs.x + obs.width - 6, obs.y + obs.height);
-          ctx.stroke();
-        } else if (obs.type === "overhead_banner") {
-          // Overhead Exam Alert Ribbon
-          ctx.fillRect(obs.x, obs.y, obs.width, obs.height - 4);
-          ctx.fillStyle = "#FFFFFF";
-          ctx.font = "bold 9px monospace";
-          ctx.fillText("DUCK", obs.x + 7, obs.y + 12);
+        } else if (obs.type === "bird_low" || obs.type === "bird_mid" || obs.type === "bird_high") {
+          // Flying Bird with 2-frame flapping wings
+          drawBird(ctx, obs, currentTime);
         }
       }
 
-      // 6. Draw Animated Stickman
-      drawStickman(ctx, p, groundY, currentTime, state, distanceRef.current);
+      // 6. Draw Animated Stickman firmly aligned to ground
+      drawStickman(ctx, p, currentTime, state, distanceRef.current);
 
-      // 7. Render In-Game HUD (Score, Best Score, Speed)
+      // 7. Render In-Game HUD (Speed at top-left, Score & Best at top-right)
       ctx.fillStyle = "#0F172A";
       ctx.font = "bold 15px monospace";
       ctx.textAlign = "right";
       const scoreStr = String(scoreRef.current).padStart(5, "0");
       const highStr = String(highScoreRef.current).padStart(5, "0");
-      ctx.fillText(`SCORE: ${scoreStr}`, logicalWidth - 25, 32);
+      ctx.fillText(`SCORE: ${scoreStr}`, GAME_CANVAS_WIDTH - 25, 32);
 
       ctx.fillStyle = "#64748B";
       ctx.font = "12px monospace";
-      ctx.fillText(`BEST:  ${highStr}`, logicalWidth - 25, 50);
+      ctx.fillText(`BEST:  ${highStr}`, GAME_CANVAS_WIDTH - 25, 50);
 
       // Speed indicator
       ctx.textAlign = "left";
@@ -852,74 +972,41 @@ export function FactJumperGame() {
       ctx.font = "11px monospace";
       ctx.fillText(`SPEED: ${(speedRef.current).toFixed(1)}x`, 25, 32);
 
-      // Active Exam Fact Banner at top center
-      if (activeFact) {
-        ctx.save();
-        ctx.fillStyle = "#1E293B";
-        ctx.font = "11px system-ui, -apple-system, sans-serif";
-        ctx.textAlign = "center";
-        const maxFactWidth = logicalWidth - 360;
-        let truncated = activeFact;
-        if (ctx.measureText(truncated).width > maxFactWidth) {
-          while (ctx.measureText(truncated + "...").width > maxFactWidth && truncated.length > 10) {
-            truncated = truncated.slice(0, -1);
-          }
-          truncated += "...";
-        }
-
-        ctx.fillStyle = "rgba(245, 158, 11, 0.12)";
-        ctx.strokeStyle = "#F59E0B";
-        ctx.lineWidth = 1;
-        const bannerW = ctx.measureText(truncated).width + 36;
-        ctx.beginPath();
-        ctx.roundRect((logicalWidth - bannerW) / 2, 14, bannerW, 26, 6);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = "#D97706";
-        ctx.font = "bold 10px monospace";
-        ctx.fillText("★ EXAM FACT: ", (logicalWidth - bannerW) / 2 + 48, 30);
-        ctx.fillStyle = "#1E293B";
-        ctx.font = "11px system-ui, sans-serif";
-        ctx.fillText(truncated, (logicalWidth + 60) / 2, 30);
-        ctx.restore();
-      }
-
       // 8. Overlays for PAUSED and GAMEOVER
       if (state === "PAUSED") {
         ctx.fillStyle = "rgba(15, 23, 42, 0.6)";
-        ctx.fillRect(0, 0, logicalWidth, logicalHeight);
+        ctx.fillRect(0, 0, GAME_CANVAS_WIDTH, GAME_CANVAS_HEIGHT);
 
         ctx.fillStyle = "#FFFFFF";
         ctx.font = "bold 24px system-ui, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("GAME PAUSED", logicalWidth / 2, logicalHeight / 2 - 10);
+        ctx.fillText("GAME PAUSED", GAME_CANVAS_WIDTH / 2, GAME_CANVAS_HEIGHT / 2 - 10);
 
         ctx.font = "13px monospace";
         ctx.fillStyle = "#CBD5E1";
-        ctx.fillText("Press P or Tap anywhere to Resume", logicalWidth / 2, logicalHeight / 2 + 20);
+        ctx.fillText("Press P or Tap anywhere to Resume", GAME_CANVAS_WIDTH / 2, GAME_CANVAS_HEIGHT / 2 + 20);
       } else if (state === "GAMEOVER") {
         ctx.fillStyle = "rgba(15, 23, 42, 0.82)";
-        ctx.fillRect(0, 0, logicalWidth, logicalHeight);
+        ctx.fillRect(0, 0, GAME_CANVAS_WIDTH, GAME_CANVAS_HEIGHT);
 
         ctx.fillStyle = "#EF4444";
         ctx.font = "bold 28px system-ui, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("GAME OVER", logicalWidth / 2, logicalHeight / 2 - 40);
+        ctx.fillText("GAME OVER", GAME_CANVAS_WIDTH / 2, GAME_CANVAS_HEIGHT / 2 - 40);
 
         ctx.fillStyle = "#FFFFFF";
         ctx.font = "bold 16px monospace";
-        ctx.fillText(`SCORE: ${scoreRef.current}   |   BEST: ${highScoreRef.current}`, logicalWidth / 2, logicalHeight / 2 - 5);
+        ctx.fillText(`SCORE: ${scoreRef.current}   |   BEST: ${highScoreRef.current}`, GAME_CANVAS_WIDTH / 2, GAME_CANVAS_HEIGHT / 2 - 5);
 
         if (scoreRef.current >= highScoreRef.current && scoreRef.current > 0) {
           ctx.fillStyle = "#F59E0B";
           ctx.font = "bold 13px monospace";
-          ctx.fillText("★ NEW HIGH SCORE! ★", logicalWidth / 2, logicalHeight / 2 + 20);
+          ctx.fillText("★ NEW HIGH SCORE! ★", GAME_CANVAS_WIDTH / 2, GAME_CANVAS_HEIGHT / 2 + 20);
         }
 
         ctx.fillStyle = "#E2E8F0";
         ctx.font = "13px monospace";
-        ctx.fillText("Press SPACE, R, or Tap to Restart", logicalWidth / 2, logicalHeight / 2 + 46);
+        ctx.fillText("Press SPACE, R, or Tap to Restart", GAME_CANVAS_WIDTH / 2, GAME_CANVAS_HEIGHT / 2 + 46);
       }
     };
 
@@ -927,11 +1014,12 @@ export function FactJumperGame() {
     animFrameIdRef.current = requestAnimationFrame(render);
 
     return () => {
+      window.removeEventListener("resize", configureCanvas);
       if (animFrameIdRef.current) {
         cancelAnimationFrame(animFrameIdRef.current);
       }
     };
-  }, [activeFact, playSound]);
+  }, [playSound, physics]);
 
   // Canvas click / touch handler: split controls (top 65% = jump, bottom 35% = duck)
   const handleCanvasPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -982,7 +1070,7 @@ export function FactJumperGame() {
               </span>
             </h2>
             <p className="meta-text text-xs">
-              Minimalist offline stickman runner • Clear exam hurdles & duck under drones
+              Minimalist offline stickman runner • Clear exam hurdles & duck under flying birds
             </p>
           </div>
         </div>
@@ -1048,7 +1136,7 @@ export function FactJumperGame() {
           onPointerDown={handleCanvasPointerDown}
           onPointerUp={handleCanvasPointerUp}
           onPointerCancel={handleCanvasPointerUp}
-          className="w-full aspect-[2.6/1] block cursor-pointer transition-colors duration-500"
+          className="w-full aspect-[840/320] block cursor-pointer transition-colors duration-500"
           title="Click upper area to Jump, lower area to Duck"
         />
       </div>
@@ -1096,11 +1184,11 @@ export function FactJumperGame() {
         <div className="editorial-card p-3 flex items-center justify-between text-xs font-mono text-[var(--text-secondary)]">
           <div className="flex items-center gap-2">
             <Info className="w-4 h-4 text-[var(--brand-primary)] shrink-0" />
-            <span>Jump over books & hurdles • Duck under low drones • P to pause</span>
+            <span>Jump over books & hurdles • Duck under flying birds • P to pause</span>
           </div>
           <span className="shrink-0 flex items-center gap-1 font-semibold text-[var(--brand-primary)]">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>100pts = New Fact</span>
+            <Trophy className="w-3.5 h-3.5 text-amber-500" />
+            <span>100pt Milestones</span>
           </span>
         </div>
       </div>

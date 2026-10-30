@@ -1,18 +1,31 @@
 import { api } from "@/lib/api";
 
-export interface AskResponse {
-  answer: string;
-  sources?: string[];
+export interface SourceItem {
+  name: string;
+  url?: string | null;
+  date?: string | null;
 }
 
-export async function askQuestion(question: string): Promise<AskResponse> {
-  try {
-    return await api.post<AskResponse>("/api/v1/ask", { question });
-  } catch {
-    // Phase 2 fallback response matching prompt instructions
-    return {
-      answer: "Ask FlashFacts AI is being connected to the intelligence engine.",
-      sources: [],
-    };
+export interface ChatHistoryItem {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface AskResponse {
+  answer: string;
+  filters?: Record<string, any>;
+  sources?: (SourceItem | string)[];
+  events_found?: number;
+  provider?: string;
+}
+
+export async function askQuestion(
+  question: string,
+  history?: ChatHistoryItem[]
+): Promise<AskResponse> {
+  const payload: { question: string; history?: ChatHistoryItem[] } = { question };
+  if (history && history.length > 0) {
+    payload.history = history;
   }
+  return await api.post<AskResponse>("/api/v1/ask", payload);
 }

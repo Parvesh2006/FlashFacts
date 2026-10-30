@@ -114,28 +114,21 @@ class ExamIntelligenceService:
 
     def score_event_for_exam(self, event: Event, exam_def: Dict[str, Any]) -> Dict[str, Any]:
         """Score a single event's relevance to one exam (0-100)."""
-        score = 0
-        reasons: List[str] = []
-        text = f"{event.title} {event.summary or ''}".lower()
+        from app.services.news_relevance_service import NewsRelevanceService
+        rel_eval = NewsRelevanceService.evaluate(event.title, event.summary or "", domain=event.domain)
+        if not rel_eval.is_eligible:
+            return {
+                "exam_id": exam_def["id"],
+                "exam_name": exam_def["name"],
+                "exam_code": exam_def["code"],
+                "relevance_score": min(15, rel_eval.relevance_score),
+                "section": exam_def["section_label"],
+                "reasons": [f"Excluded: {rel_eval.rejection_reason}"],
+            }
 
-        # Non-exam domains (e.g. routine crime) have no exam relevance unless landmark legal/constitutional
-        if event.domain in ("Crime", "Entertainment", "Lifestyle", "Gossip", "Cinema"):
-            landmark_legal_words = [
-                "supreme court", "high court", "constitution bench", "constitutional bench",
-                "landmark judgment", "law commission", "criminal law reform",
-                "bharatiya nyaya sanhita", "bns", "ipc amendment",
-                "உச்ச நீதிமன்றம்", "உயர் நீதிமன்றம்", "அரசியலமைப்பு", "நீதிபதிகள் அமர்வு",
-                "வரலாற்று சிறப்புமிக்க தீர்ப்பு", "சட்டத்திருத்தம்", "சட்ட திருத்தம்"
-            ]
-            if not any(w in text for w in landmark_legal_words):
-                return {
-                    "exam_id": exam_def["id"],
-                    "exam_name": exam_def["name"],
-                    "exam_code": exam_def["code"],
-                    "relevance_score": 10,
-                    "section": exam_def["section_label"],
-                    "reasons": [f"Routine {event.domain.lower()} report without direct syllabus relevance"],
-                }
+        score = max(20, rel_eval.relevance_score)
+        reasons: List[str] = [rel_eval.inclusion_reason]
+        text = f"{event.title} {event.summary or ''}".lower()
 
         # Domain match
         if event.domain in exam_def["domains"]:
@@ -278,6 +271,16 @@ class ExamIntelligenceService:
         event = self.event_repo.get_by_id(event_id)
         if not event:
             return {"event_id": event_id, "mcqs": [], "provider": "none", "error": "Event not found"}
+
+        from app.services.news_relevance_service import NewsRelevanceService
+        rel_eval = NewsRelevanceService.evaluate(event.title, event.summary or "", domain=event.domain)
+        if not rel_eval.is_eligible:
+            return {
+                "event_id": event_id,
+                "mcqs": [],
+                "provider": "none",
+                "error": f"Article excluded from exam relevance: {rel_eval.rejection_reason}",
+            }
 
         count = max(1, min(count, 5))
 

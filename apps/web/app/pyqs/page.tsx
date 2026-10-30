@@ -42,6 +42,7 @@ import {
 import { saveQuestionToMistakeBook } from "@/services/revision";
 import { BackButton } from "@/components/navigation/back-button";
 import { PDFViewerModal } from "@/components/pyqs/pdf-viewer-modal";
+import { EmptyBookmarksIllustration } from "@/components/illustrations/educational-illustrations";
 import {
   getOfflinePapers,
   isPaperSavedOffline,
@@ -51,6 +52,32 @@ import {
   OfflinePaperRecord,
 } from "@/lib/offline-pdf-storage";
 import { useAuth } from "@/lib/auth";
+
+function getCleanOption(opt: string): string {
+  if (!opt) return "";
+  const cleaned = opt.replace(/^[A-D][.)]\s*/i, "").trim();
+  return cleaned || opt.trim();
+}
+
+function getCorrectOptionIndex(q: PYQ): number {
+  if (!q.correct_answer || !q.options || q.options.length !== 4) return -1;
+  const raw = q.correct_answer.trim();
+  if (/^[A-D]$/i.test(raw)) {
+    return raw.toUpperCase().charCodeAt(0) - 65;
+  }
+  const match = raw.match(/^([A-D])[.)]\s*/i);
+  if (match) {
+    return match[1].toUpperCase().charCodeAt(0) - 65;
+  }
+  const cleanAns = getCleanOption(raw).toLowerCase();
+  for (let i = 0; i < q.options.length; i++) {
+    const cleanOpt = getCleanOption(q.options[i]).toLowerCase();
+    if (cleanOpt === cleanAns || q.options[i].trim().toLowerCase() === raw.toLowerCase()) {
+      return i;
+    }
+  }
+  return -1;
+}
 
 export default function PYQBankPage() {
   const { user } = useAuth();
@@ -68,8 +95,11 @@ export default function PYQBankPage() {
 
   // Filters for Papers
   const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedExamName, setSelectedExamName] = useState<string>("");
   const [selectedPaperYear, setSelectedPaperYear] = useState<string>("");
+  const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [selectedLanguage, setSelectedLanguage] = useState<string>("");
+  const [selectedAvailability, setSelectedAvailability] = useState<string>("");
   const [paperSearchQuery, setPaperSearchQuery] = useState<string>("");
 
   // PDF Viewer Modal State
@@ -92,6 +122,7 @@ export default function PYQBankPage() {
   const [loadingPractice, setLoadingPractice] = useState(true);
   const [selectedExam, setSelectedExam] = useState<string>("TNPSC Group 4");
   const [selectedPracticeYear, setSelectedPracticeYear] = useState<string>("");
+  const [selectedPracticeType, setSelectedPracticeType] = useState<string>("all");
   const [practiceSearchQuery, setPracticeSearchQuery] = useState<string>("");
 
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
@@ -134,8 +165,11 @@ export default function PYQBankPage() {
     setPaperError(null);
     fetchPYQPapers({
       category: selectedCategory || undefined,
+      exam_name: selectedExamName || undefined,
       year: selectedPaperYear ? parseInt(selectedPaperYear, 10) : undefined,
+      subject: selectedSubject || undefined,
       language: selectedLanguage || undefined,
+      availability: selectedAvailability || undefined,
       q: paperSearchQuery || undefined,
       limit: 50,
     })
@@ -147,7 +181,15 @@ export default function PYQBankPage() {
         setPaperError("Unable to retrieve question papers from archive.");
       })
       .finally(() => setLoadingPapers(false));
-  }, [selectedCategory, selectedPaperYear, selectedLanguage, paperSearchQuery]);
+  }, [
+    selectedCategory,
+    selectedExamName,
+    selectedPaperYear,
+    selectedSubject,
+    selectedLanguage,
+    selectedAvailability,
+    paperSearchQuery,
+  ]);
 
   // Load Practice MCQs when filters change
   useEffect(() => {
@@ -156,6 +198,7 @@ export default function PYQBankPage() {
       fetchPYQs({
         exam_name: selectedExam || undefined,
         year: selectedPracticeYear ? parseInt(selectedPracticeYear, 10) : undefined,
+        type: selectedPracticeType === "all" ? undefined : selectedPracticeType,
         q: practiceSearchQuery || undefined,
         limit: 100,
       })
@@ -163,7 +206,7 @@ export default function PYQBankPage() {
         .catch((err) => console.error("Failed to load practice questions", err))
         .finally(() => setLoadingPractice(false));
     }
-  }, [activeTab, selectedExam, selectedPracticeYear, practiceSearchQuery]);
+  }, [activeTab, selectedExam, selectedPracticeYear, selectedPracticeType, practiceSearchQuery]);
 
   const handleOpenViewer = (paper: PYQPaper) => {
     setSelectedPaperForViewing(paper);
@@ -349,14 +392,34 @@ export default function PYQBankPage() {
               </div>
             </div>
 
-            {/* Sub-Filters: Year & Language */}
-            <div className="flex flex-wrap items-center gap-4 font-mono text-xs">
-              <div className="flex items-center gap-2">
-                <span className="text-[var(--text-secondary)] text-[11px]">Year:</span>
+            {/* Dynamic Multi-Attribute Filter Toolbar: Exam, Year, Subject, Language, Availability */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 font-mono text-xs pt-1">
+              <div>
+                <label className="block text-[var(--text-secondary)] text-[10px] uppercase font-bold mb-1">
+                  1. Exam
+                </label>
+                <select
+                  value={selectedExamName}
+                  onChange={(e) => setSelectedExamName(e.target.value)}
+                  className="control-input w-full py-1.5 px-2 text-xs font-mono"
+                >
+                  <option value="">All Examinations</option>
+                  {paperFilters?.exams.map((ex) => (
+                    <option key={ex} value={ex}>
+                      {ex}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[var(--text-secondary)] text-[10px] uppercase font-bold mb-1">
+                  2. Year
+                </label>
                 <select
                   value={selectedPaperYear}
                   onChange={(e) => setSelectedPaperYear(e.target.value)}
-                  className="control-input py-1 px-2 text-xs font-mono"
+                  className="control-input w-full py-1.5 px-2 text-xs font-mono"
                 >
                   <option value="">All Years</option>
                   {paperFilters?.years.map((y) => (
@@ -367,12 +430,32 @@ export default function PYQBankPage() {
                 </select>
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="text-[var(--text-secondary)] text-[11px]">Language:</span>
+              <div>
+                <label className="block text-[var(--text-secondary)] text-[10px] uppercase font-bold mb-1">
+                  3. Subject
+                </label>
+                <select
+                  value={selectedSubject}
+                  onChange={(e) => setSelectedSubject(e.target.value)}
+                  className="control-input w-full py-1.5 px-2 text-xs font-mono"
+                >
+                  <option value="">All Subjects</option>
+                  {paperFilters?.subjects.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[var(--text-secondary)] text-[10px] uppercase font-bold mb-1">
+                  4. Language
+                </label>
                 <select
                   value={selectedLanguage}
                   onChange={(e) => setSelectedLanguage(e.target.value)}
-                  className="control-input py-1 px-2 text-xs font-mono"
+                  className="control-input w-full py-1.5 px-2 text-xs font-mono"
                 >
                   <option value="">All Languages</option>
                   {paperFilters?.languages.map((l) => (
@@ -383,21 +466,49 @@ export default function PYQBankPage() {
                 </select>
               </div>
 
-              {(selectedCategory || selectedPaperYear || selectedLanguage || paperSearchQuery) && (
+              <div>
+                <label className="block text-[var(--text-secondary)] text-[10px] uppercase font-bold mb-1">
+                  5. PDF Availability
+                </label>
+                <select
+                  value={selectedAvailability}
+                  onChange={(e) => setSelectedAvailability(e.target.value)}
+                  className="control-input w-full py-1.5 px-2 text-xs font-mono"
+                >
+                  <option value="">All Papers</option>
+                  <option value="available">Verified Local PDF</option>
+                  <option value="source_link_only">Official Archive Link</option>
+                  <option value="external_pdf">Verified External PDF</option>
+                  <option value="unavailable">PDF Currently Unavailable</option>
+                </select>
+              </div>
+            </div>
+
+            {(selectedCategory ||
+              selectedExamName ||
+              selectedPaperYear ||
+              selectedSubject ||
+              selectedLanguage ||
+              selectedAvailability ||
+              paperSearchQuery) && (
+              <div className="flex justify-end pt-1">
                 <button
                   onClick={() => {
                     setSelectedCategory("");
+                    setSelectedExamName("");
                     setSelectedPaperYear("");
+                    setSelectedSubject("");
                     setSelectedLanguage("");
+                    setSelectedAvailability("");
                     setPaperSearchQuery("");
                   }}
-                  className="text-[11px] text-[var(--brand-primary)] hover:underline flex items-center gap-1 ml-auto"
+                  className="text-[11px] text-[var(--brand-primary)] hover:underline flex items-center gap-1 font-mono"
                 >
                   <RotateCcw className="w-3 h-3" />
-                  <span>Reset Filters</span>
+                  <span>Reset All Filters</span>
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Paper Cards Grid */}
@@ -420,6 +531,32 @@ export default function PYQBankPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {papers.map((p) => {
                 const isSaved = offlineStatusMap[p.id];
+                const isLocal = p.has_local_file && p.availability_status === "available";
+                const isExternalPdf = p.availability_status === "external_pdf" && Boolean(p.pdf_url);
+                const isUnavailable = p.availability_status === "unavailable";
+
+                let statusBadgeText = "Official Archive Link";
+                let statusBadgeClass = "text-sky-600";
+                let StatusIcon = ExternalLink;
+
+                if (p.verification_status !== "verified_official") {
+                  statusBadgeText = "Unverified Source";
+                  statusBadgeClass = "text-amber-600";
+                  StatusIcon = AlertCircle;
+                } else if (isLocal) {
+                  statusBadgeText = "Verified Official Local PDF";
+                  statusBadgeClass = "text-emerald-600";
+                  StatusIcon = ShieldCheck;
+                } else if (isExternalPdf) {
+                  statusBadgeText = "Verified Official External PDF";
+                  statusBadgeClass = "text-emerald-600";
+                  StatusIcon = ShieldCheck;
+                } else if (isUnavailable) {
+                  statusBadgeText = "PDF Currently Unavailable";
+                  statusBadgeClass = "text-rose-600";
+                  StatusIcon = AlertCircle;
+                }
+
                 return (
                   <div
                     key={p.id}
@@ -434,9 +571,12 @@ export default function PYQBankPage() {
                           <span className="soft-badge px-2 py-0.5">{p.year}</span>
                           <span className="soft-badge px-2 py-0.5 uppercase">{p.language}</span>
                         </div>
-                        <span className="text-emerald-600 font-semibold flex items-center gap-1 text-[10px]">
-                          <ShieldCheck className="w-3.5 h-3.5" />
-                          <span>Official</span>
+                        <span
+                          className={`font-semibold flex items-center gap-1 text-[10px] ${statusBadgeClass}`}
+                          title={`Verification Status: ${statusBadgeText}`}
+                        >
+                          <StatusIcon className="w-3.5 h-3.5" />
+                          <span>{statusBadgeText}</span>
                         </span>
                       </div>
 
@@ -461,8 +601,18 @@ export default function PYQBankPage() {
                           <span>
                             Code: <strong>{p.paper_code || "OFFICIAL"}</strong>
                           </span>
-                          {p.file_size_bytes && (
-                            <span>{(p.file_size_bytes / 1024).toFixed(1)} KB</span>
+                          {isLocal && p.file_size_bytes ? (
+                            <span className="text-emerald-600 font-semibold">
+                              {p.file_size_bytes > 1024 * 1024
+                                ? `${(p.file_size_bytes / (1024 * 1024)).toFixed(2)} MB (Local PDF)`
+                                : `${(p.file_size_bytes / 1024).toFixed(1)} KB (Local PDF)`}
+                            </span>
+                          ) : isExternalPdf && p.file_size_bytes ? (
+                            <span className="text-emerald-600 font-semibold">{(p.file_size_bytes / 1024 / 1024).toFixed(1)} MB (Official Host)</span>
+                          ) : isUnavailable ? (
+                            <span className="text-rose-500 italic">Check in Progress</span>
+                          ) : (
+                            <span className="text-[var(--text-muted)] italic">Official Commission Archive</span>
                           )}
                         </div>
                       </div>
@@ -470,53 +620,155 @@ export default function PYQBankPage() {
 
                     {/* Card Actions */}
                     <div className="pt-2 border-t flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleOpenViewer(p)}
-                          className="btn btn-primary px-3 py-1.5 flex items-center gap-1.5"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>View PDF</span>
-                        </button>
+                      {isLocal ? (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleOpenViewer(p)}
+                              className="btn btn-primary px-3 py-1.5 flex items-center gap-1.5"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>View PDF</span>
+                            </button>
 
-                        <a
-                          href={getPYQPaperDownloadUrl(p.id)}
-                          download
-                          className="btn btn-secondary px-3 py-1.5 flex items-center gap-1.5"
-                          title="Download PDF file"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                          <span className="hidden sm:inline">Download</span>
-                        </a>
-                      </div>
+                            <a
+                              href={getPYQPaperDownloadUrl(p.id)}
+                              download
+                              className="btn btn-secondary px-3 py-1.5 flex items-center gap-1.5"
+                              title="Download PDF file"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              <span className="hidden sm:inline">Download</span>
+                            </a>
+                          </div>
 
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleToggleOfflineSave(p)}
-                          className={`p-1.5 rounded-lg border transition-colors ${
-                            isSaved
-                              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
-                              : "border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                          }`}
-                          title={isSaved ? "Saved for offline study" : "Save for offline study"}
-                        >
-                          {isSaved ? (
-                            <CheckCircle2 className="w-4 h-4" />
-                          ) : (
-                            <HardDriveDownload className="w-4 h-4" />
-                          )}
-                        </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleToggleOfflineSave(p)}
+                              className={`p-1.5 rounded-lg border transition-colors ${
+                                isSaved
+                                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
+                                  : "border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                              }`}
+                              title={isSaved ? "Saved for offline study" : "Save for offline study"}
+                            >
+                              {isSaved ? (
+                                <CheckCircle2 className="w-4 h-4" />
+                              ) : (
+                                <HardDriveDownload className="w-4 h-4" />
+                              )}
+                            </button>
 
-                        <a
-                          href={p.source_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-1.5 rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--brand-primary)] transition-colors"
-                          title="View Official Portal Source"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </a>
-                      </div>
+                            <a
+                              href={p.source_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1.5 rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--brand-primary)] transition-colors"
+                              title="View Official Portal Source"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </a>
+                          </div>
+                        </>
+                      ) : isExternalPdf ? (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={p.pdf_url!}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-primary px-3 py-1.5 flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                              title="Open verified direct official question booklet from commission portal"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              <span>View Official PDF</span>
+                            </a>
+
+                            <button
+                              onClick={() => handleOpenViewer(p)}
+                              className="btn btn-secondary px-2.5 py-1.5 flex items-center gap-1.5"
+                              title="View Document Provenance and Live Verification Details"
+                            >
+                              <FileText className="w-3.5 h-3.5" />
+                              <span className="hidden sm:inline">Provenance</span>
+                            </button>
+                          </div>
+
+                          <a
+                            href={p.source_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--brand-primary)] transition-colors"
+                            title="Open Official Commission Master Archive Portal"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                        </>
+                      ) : isUnavailable ? (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="btn px-2.5 py-1.5 flex items-center gap-1.5 opacity-80 cursor-default bg-rose-500/10 text-rose-600 border border-rose-500/20 text-xs"
+                              title="The official paper cannot be hosted locally because it was released via candidate-only login objection tracking"
+                            >
+                              <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
+                              <span>PDF Currently Unavailable</span>
+                            </span>
+
+                            <a
+                              href={p.source_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-secondary px-2.5 py-1.5 flex items-center gap-1.5"
+                              title="Open Official Commission Portal"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5 text-[var(--brand-primary)]" />
+                              <span className="hidden sm:inline">Official Source</span>
+                            </a>
+
+                            <button
+                              onClick={() => handleOpenViewer(p)}
+                              className="btn btn-secondary px-2.5 py-1.5 flex items-center gap-1.5"
+                              title="View Provenance Details"
+                            >
+                              <FileText className="w-3.5 h-3.5" />
+                              <span className="hidden sm:inline">Details</span>
+                            </button>
+                          </div>
+
+                          <div className="text-[10px] text-[var(--text-muted)] font-mono">
+                            CBT Response Portal Only
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={p.source_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-primary px-3 py-1.5 flex items-center gap-1.5"
+                              title="Open Official Commission Question Paper & Answer Key Portal"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              <span>Open Official Archive</span>
+                            </a>
+
+                            <button
+                              onClick={() => handleOpenViewer(p)}
+                              className="btn btn-secondary px-2.5 py-1.5 flex items-center gap-1.5"
+                              title="View Document Details and Provenance"
+                            >
+                              <FileText className="w-3.5 h-3.5" />
+                              <span className="hidden sm:inline">Provenance</span>
+                            </button>
+                          </div>
+
+                          <div className="text-[10px] text-[var(--text-muted)] font-mono">
+                            Archive link verified
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 );
@@ -531,43 +783,70 @@ export default function PYQBankPage() {
          ========================================================================= */}
       {activeTab === "practice" && (
         <div className="space-y-6">
-          <div className="editorial-card p-4 flex flex-wrap items-center justify-between gap-4 font-mono text-xs">
-            <div className="flex flex-wrap items-center gap-3">
-              <select
-                value={selectedExam}
-                onChange={(e) => setSelectedExam(e.target.value)}
-                className="control-input py-1.5 px-3 text-xs font-mono"
-              >
-                {practiceFilters?.exams.map((ex) => (
-                  <option key={ex} value={ex}>
-                    {ex}
-                  </option>
-                ))}
-              </select>
+          <div className="editorial-card p-4 space-y-3 font-mono text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <select
+                  value={selectedExam}
+                  onChange={(e) => setSelectedExam(e.target.value)}
+                  className="control-input py-1.5 px-3 text-xs font-mono"
+                >
+                  {practiceFilters?.exams.map((ex) => (
+                    <option key={ex} value={ex}>
+                      {ex}
+                    </option>
+                  ))}
+                </select>
 
-              <select
-                value={selectedPracticeYear}
-                onChange={(e) => setSelectedPracticeYear(e.target.value)}
-                className="control-input py-1.5 px-3 text-xs font-mono"
-              >
-                <option value="">All Years</option>
-                {practiceFilters?.years.map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ))}
-              </select>
+                <select
+                  value={selectedPracticeYear}
+                  onChange={(e) => setSelectedPracticeYear(e.target.value)}
+                  className="control-input py-1.5 px-3 text-xs font-mono"
+                >
+                  <option value="">All Years</option>
+                  {practiceFilters?.years.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-secondary)]" />
+                <input
+                  type="text"
+                  placeholder="Search questions..."
+                  value={practiceSearchQuery}
+                  onChange={(e) => setPracticeSearchQuery(e.target.value)}
+                  className="control-input w-full pl-8 pr-3 py-1.5 text-xs font-mono"
+                />
+              </div>
             </div>
 
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-secondary)]" />
-              <input
-                type="text"
-                placeholder="Search questions..."
-                value={practiceSearchQuery}
-                onChange={(e) => setPracticeSearchQuery(e.target.value)}
-                className="control-input w-full pl-8 pr-3 py-1.5 text-xs font-mono"
-              />
+            {/* Category Filter Pills */}
+            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[var(--border)]">
+              <span className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider font-semibold mr-1">
+                Category:
+              </span>
+              {[
+                { id: "all", label: "All Questions" },
+                { id: "verified_pyq", label: "Verified PYQs" },
+                { id: "syllabus_practice", label: "Syllabus Practice" },
+              ].map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setSelectedPracticeType(cat.id)}
+                  className={`px-3 py-1 text-xs font-mono rounded-lg transition-all border ${
+                    selectedPracticeType === cat.id
+                      ? "bg-[var(--brand-primary)] text-white border-[var(--brand-primary)] font-semibold shadow-sm"
+                      : "bg-[var(--surface-elevated)] text-[var(--text-secondary)] border-[var(--border)] hover:text-[var(--text-primary)]"
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -579,18 +858,40 @@ export default function PYQBankPage() {
           ) : (
             <div className="space-y-5">
               {pyqs.map((q, idx) => {
+                // Graceful fallback for invalid/unverified questions
+                if (q.quality_status === "invalid" || !q.options || q.options.length !== 4) {
+                  return (
+                    <div
+                      key={q.id}
+                      className="editorial-card p-5 border border-dashed border-amber-500/30 bg-amber-500/5 space-y-2"
+                    >
+                      <div className="flex items-center justify-between text-xs font-mono">
+                        <span className="soft-badge px-2 py-0.5 font-bold text-amber-600 bg-amber-500/10">
+                          Q{idx + 1} &bull; Unavailable
+                        </span>
+                        <span className="text-[var(--text-secondary)]">{q.exam_name}</span>
+                      </div>
+                      <p className="text-xs text-[var(--text-secondary)] font-mono">
+                        Question unavailable for practice pending review.
+                      </p>
+                    </div>
+                  );
+                }
+
                 const userAns = selectedAnswers[q.id];
                 const isRevealed = revealedExplanations[q.id];
-                const isCorrect = userAns ? q.correct_answer.startsWith(userAns) : null;
+                const correctIdx = getCorrectOptionIndex(q);
+                const correctLetter = correctIdx >= 0 ? String.fromCharCode(65 + correctIdx) : q.correct_answer;
+                const isCorrect = userAns ? userAns === correctLetter : null;
 
                 return (
                   <div key={q.id} className="editorial-card p-6 space-y-4">
                     <div className="flex items-center justify-between gap-2 font-mono text-xs border-b pb-3">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="soft-badge px-2 py-0.5 font-bold text-[var(--brand-primary)]">
                           Q{idx + 1}
                         </span>
-                        <span>{q.exam_name}</span>
+                        <span className="font-semibold">{q.exam_name}</span>
                         <span>&bull;</span>
                         <span>{q.year}</span>
                         {q.subject && (
@@ -598,6 +899,15 @@ export default function PYQBankPage() {
                             <span>&bull;</span>
                             <span className="text-[var(--text-secondary)]">{q.subject}</span>
                           </>
+                        )}
+                        {q.question_type === "verified_pyq" ? (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                            Verified PYQ
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-500/10 text-blue-600 border border-blue-500/20">
+                            Syllabus Practice
+                          </span>
                         )}
                       </div>
 
@@ -620,10 +930,11 @@ export default function PYQBankPage() {
                     </p>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 font-mono text-xs">
-                      {q.options.map((opt) => {
-                        const optLetter = opt.charAt(0);
-                        const isSelected = userAns === optLetter;
-                        const isThisCorrect = q.correct_answer.startsWith(optLetter);
+                      {q.options.map((opt, optIdx) => {
+                        const letter = String.fromCharCode(65 + optIdx);
+                        const cleanOpt = getCleanOption(opt);
+                        const isSelected = userAns === letter;
+                        const isThisCorrect = correctIdx === optIdx;
 
                         let optClass = "border-[var(--border)] hover:bg-[var(--surface-elevated)]";
                         if (userAns) {
@@ -636,12 +947,12 @@ export default function PYQBankPage() {
 
                         return (
                           <button
-                            key={opt}
-                            onClick={() => handleAnswerSelect(q.id, optLetter)}
-                            className={`p-3 rounded-xl border text-left transition-colors flex items-start gap-2 ${optClass}`}
+                            key={optIdx}
+                            onClick={() => handleAnswerSelect(q.id, letter)}
+                            className={`p-3 rounded-xl border text-left transition-colors flex items-start gap-2.5 ${optClass}`}
                           >
-                            <span className="font-bold">{optLetter}.</span>
-                            <span>{opt.substring(opt.indexOf(".") + 1).trim()}</span>
+                            <span className="font-bold opacity-80">{letter}.</span>
+                            <span className="flex-1 leading-snug">{cleanOpt}</span>
                           </button>
                         );
                       })}
@@ -656,7 +967,12 @@ export default function PYQBankPage() {
                             </span>
                           ) : (
                             <span className="text-rose-600 font-bold flex items-center gap-1">
-                              <XCircle className="w-4 h-4" /> Incorrect. Correct is {q.correct_answer.charAt(0)}
+                              <XCircle className="w-4 h-4" /> Incorrect. Correct is {correctLetter}
+                              {correctIdx >= 0 && q.options[correctIdx] && (
+                                <span className="font-normal text-[var(--text-secondary)]">
+                                  : {getCleanOption(q.options[correctIdx])}
+                                </span>
+                              )}
                             </span>
                           )}
                         </div>
@@ -721,15 +1037,15 @@ export default function PYQBankPage() {
           </div>
 
           {offlinePapers.length === 0 ? (
-            <div className="editorial-card p-12 text-center space-y-3 font-mono text-xs">
-              <HardDriveDownload className="w-10 h-10 mx-auto text-[var(--text-secondary)]" />
+            <div className="editorial-card p-12 text-center space-y-4 font-mono text-xs border border-[var(--border)] bg-[var(--surface)] shadow-xs">
+              <EmptyBookmarksIllustration size={100} className="mx-auto" />
               <h3 className="text-base font-bold text-[var(--text-primary)]">No Offline Papers Saved</h3>
               <p className="text-[var(--text-secondary)] max-w-md mx-auto">
-                Click the "Save Offline" button on any paper card in the Question Papers tab to cache it locally on this device.
+                Click the "Save Offline" button on any verified paper in the Question Papers tab to cache it locally on this device.
               </p>
               <button
                 onClick={() => setActiveTab("papers")}
-                className="btn btn-primary px-4 py-2 mt-2"
+                className="button-base button-primary px-4 py-2 mt-2 font-semibold shadow-xs"
               >
                 Browse Question Papers
               </button>

@@ -65,10 +65,17 @@ def test_user_data_isolation_between_two_users(client: TestClient, db_session):
     test_id = test_res.json()["id"]
     test_q = test_res.json()["questions"][0]
 
+    # Pick an option that is guaranteed to be incorrect
+    wrong_letter = "B"
+    for idx, opt_text in enumerate(test_q["options"]):
+        if "Option 1" not in opt_text:
+            wrong_letter = chr(65 + idx)
+            break
+
     # User 1 attempts the test
     attempt_res = client.post(
         f"/api/v1/mock-tests/{test_id}/attempts",
-        json={"answers": {str(test_q["id"]): "B"}},
+        json={"answers": {str(test_q["id"]): wrong_letter}},
         headers=u1_headers,
     )
     assert attempt_res.status_code == 201

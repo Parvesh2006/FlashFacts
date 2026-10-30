@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   BookOpen,
   CheckCircle2,
@@ -9,13 +10,12 @@ import {
   HelpCircle,
   RotateCcw,
   Trash2,
-  Calendar,
-  Filter,
   Sparkles,
   Loader2,
-  AlertCircle,
   Clock,
   ArrowRight,
+  BookmarkCheck,
+  Check,
 } from "lucide-react";
 import {
   fetchRevisionItems,
@@ -27,15 +27,20 @@ import {
   RevisionSummary,
 } from "@/services/revision";
 import { BackButton } from "@/components/navigation/back-button";
-import { useAuth } from "@/lib/auth";
+import { EmptyState } from "@/components/common/empty-state";
+import { ErrorState } from "@/components/common/error-state";
+import { EmptyBookmarksIllustration } from "@/components/illustrations/educational-illustrations";
+import { useAuth, ensureAuthSession } from "@/lib/auth";
 import { AuthModal } from "@/components/auth/auth-modal";
 
 export default function RevisionPage() {
+  const router = useRouter();
   const { user, isGuest } = useAuth();
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [items, setItems] = useState<RevisionItem[]>([]);
   const [summary, setSummary] = useState<RevisionSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "revised">("pending");
   const [subjectFilter, setSubjectFilter] = useState("");
 
@@ -46,23 +51,27 @@ export default function RevisionPage() {
 
   useEffect(() => {
     loadData();
-  }, [statusFilter, subjectFilter]);
+  }, [statusFilter, subjectFilter, user?.id]);
 
   const loadData = async () => {
     setLoading(true);
+    setError(null);
     try {
+      await ensureAuthSession();
+
       const [itemList, summaryData] = await Promise.all([
         fetchRevisionItems({
           status: statusFilter,
           subject: subjectFilter || undefined,
           limit: 100,
         }),
-        fetchRevisionSummary().catch(() => null),
+        fetchRevisionSummary(),
       ]);
       setItems(itemList);
       setSummary(summaryData);
     } catch (err) {
       console.error("Failed to load revision items", err);
+      setError("Unable to load Mistake Book records. Please check your network connection and retry.");
     } finally {
       setLoading(false);
     }
@@ -128,69 +137,90 @@ export default function RevisionPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-7">
-      <BackButton fallbackHref="/exams" />
+    <div className="max-w-5xl mx-auto space-y-7 page-enter">
+      <BackButton fallbackHref="/" />
 
-      {/* Header */}
-      <div className="border-b pb-5">
-        <div className="eyebrow flex items-center gap-2 mb-2">
-          <BookOpen className="w-4 h-4" />
-          <span>Intelligent Error Correction & Spaced Repetition</span>
+      {/* Editorial Header */}
+      <div className="border-b border-[var(--border)] pb-5">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="badge-editorial text-xs text-[var(--accent)] border-[var(--accent)] font-semibold">
+            ERROR RECOVERY & REVISION
+          </span>
+          <span className="text-xs text-[var(--text-muted)]">• Spaced Repetition Engine</span>
         </div>
-        <h1 className="headline text-3xl md:text-4xl">Mistake Book & Smart Revision</h1>
-        <p className="body-copy text-base mt-2 max-w-3xl">
-          Questions you missed or skipped across mock tests and practice sessions are automatically tracked here.
-          Use active retrieval and spaced-repetition intervals to permanently overcome persistent conceptual mistakes.
+        <h1 className="headline text-3xl md:text-4xl text-[var(--text-primary)] font-bold tracking-tight">
+          Mistake Book & Smart Revision
+        </h1>
+        <p className="body-copy text-sm text-[var(--text-secondary)] mt-1.5 max-w-3xl leading-relaxed">
+          Questions you missed or skipped across mock tests and practice drills are automatically cataloged here.
+          Engage in active retrieval and targeted re-testing to convert persistent weak spots into reliable marks.
         </p>
       </div>
 
       {/* Guest info banner */}
-      {isGuest && (
-        <div className="p-4 rounded-xl border border-[color-mix(in_srgb,var(--brand-primary)_35%,transparent)] bg-[color-mix(in_srgb,var(--brand-primary)_8%,transparent)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 font-mono text-xs">
-          <div className="flex items-center gap-2 text-[var(--text-primary)]">
-            <Sparkles className="w-4 h-4 text-[var(--brand-primary)] flex-shrink-0" />
+      {isGuest && user && (
+        <div className="p-4 rounded-xl border border-[color-mix(in_srgb,var(--accent)_30%,var(--border))] bg-[var(--accent-soft)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5 text-[var(--text-primary)]">
+            <Sparkles className="w-4 h-4 text-[var(--accent)] flex-shrink-0" />
             <span>
-              <strong>Guest Mistake Book:</strong> Mistakes stored locally. Sign in with Google or Email to link your questions and sync spaced repetition across devices.
+              <strong>Guest Session Active:</strong> Questions missed during this session are saved for review. Sign in anytime to link your mistake history across devices.
             </span>
           </div>
           <button
             onClick={() => setIsAuthOpen(true)}
-            className="btn btn-primary px-3 py-1.5 text-xs flex-shrink-0 whitespace-nowrap"
+            className="button-base button-primary px-3 py-1.5 text-xs flex-shrink-0 whitespace-nowrap"
           >
             Sign In to Sync
           </button>
         </div>
       )}
 
-      {/* Summary KPI Cards */}
-      {summary && (
-        <div className="grid grid-cols-3 gap-4 font-mono text-center">
-          <div className="editorial-card p-4">
-            <span className="text-xs text-[var(--text-secondary)] block">TOTAL LOGGED</span>
-            <span className="text-2xl font-bold text-[var(--text-primary)]">{summary.total_count}</span>
+      {/* Bento Summary KPI Cards - Only show when data has finished loading to prevent stale counts */}
+      {!loading && summary && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="editorial-card p-5 border border-[var(--border)] text-center shadow-xs">
+            <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider block mb-1">
+              Total Logged
+            </span>
+            <span className="text-3xl font-bold text-[var(--text-primary)] font-serif">
+              {summary.total_count}
+            </span>
+            <span className="text-[11px] text-[var(--text-muted)] block mt-1">Across all syllabus topics</span>
           </div>
-          <div className="editorial-card p-4 border-rose-500/30">
-            <span className="text-xs text-rose-500 block">PENDING REVISION</span>
-            <span className="text-2xl font-bold text-rose-600">{summary.pending_count}</span>
+
+          <div className="editorial-card p-5 border border-[color-mix(in_srgb,var(--danger)_30%,var(--border))] bg-[var(--danger-soft)] text-center shadow-xs">
+            <span className="text-[11px] font-semibold text-[var(--danger)] uppercase tracking-wider block mb-1">
+              Pending Revision
+            </span>
+            <span className="text-3xl font-bold text-[var(--danger)] font-serif">
+              {summary.pending_count}
+            </span>
+            <span className="text-[11px] text-[var(--text-muted)] block mt-1">Needs immediate active retrieval</span>
           </div>
-          <div className="editorial-card p-4 border-emerald-500/30">
-            <span className="text-xs text-emerald-600 block">MASTERED / REVISED</span>
-            <span className="text-2xl font-bold text-emerald-600">{summary.revised_count}</span>
+
+          <div className="editorial-card p-5 border border-[color-mix(in_srgb,var(--success)_30%,var(--border))] bg-[var(--success-soft)] text-center shadow-xs">
+            <span className="text-[11px] font-semibold text-[var(--success)] uppercase tracking-wider block mb-1">
+              Mastered & Verified
+            </span>
+            <span className="text-3xl font-bold text-[var(--success)] font-serif">
+              {summary.revised_count}
+            </span>
+            <span className="text-[11px] text-[var(--text-muted)] block mt-1">Concept successfully reinforced</span>
           </div>
         </div>
       )}
 
-      {/* Filter Bar */}
-      <div className="editorial-card p-4 flex flex-wrap items-center justify-between gap-4 font-mono text-xs">
-        <div className="flex gap-2">
+      {/* Filter Toolbar */}
+      <div className="editorial-card p-4 flex flex-wrap items-center justify-between gap-4 border border-[var(--border)] shadow-xs">
+        <div className="flex items-center gap-2">
           {(["pending", "revised", "all"] as const).map((st) => (
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
-              className={`px-3 py-1.5 rounded-lg capitalize transition-colors ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all ${
                 statusFilter === st
-                  ? "bg-[var(--brand-primary)] text-white font-bold"
-                  : "bg-[var(--surface)] border text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  ? "bg-[var(--accent)] text-white shadow-xs"
+                  : "bg-[var(--surface-muted)] text-[var(--text-secondary)] border border-[var(--border)] hover:text-[var(--text-primary)] hover:border-[var(--text-muted)]"
               }`}
             >
               {st === "pending" ? "Pending Review" : st === "revised" ? "Mastered" : "All Items"}
@@ -199,43 +229,68 @@ export default function RevisionPage() {
         </div>
 
         {summary && summary.subjects.length > 0 && (
-          <select
-            value={subjectFilter}
-            onChange={(e) => setSubjectFilter(e.target.value)}
-            className="px-3 py-1.5 rounded-lg border bg-[var(--surface)] text-[var(--text-primary)]"
-          >
-            <option value="">All Subjects</option>
-            {summary.subjects.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[var(--text-muted)]">Subject:</span>
+            <select
+              value={subjectFilter}
+              onChange={(e) => setSubjectFilter(e.target.value)}
+              className="px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] text-xs focus:outline-none focus:border-[var(--accent)]"
+            >
+              <option value="">All Subjects</option>
+              {summary.subjects.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
         )}
       </div>
 
       {/* Content */}
       {loading ? (
-        <div className="editorial-card p-12 flex flex-col items-center justify-center gap-3">
-          <Loader2 className="w-6 h-6 animate-spin accent-mark" />
-          <span className="body-copy text-sm font-mono">Loading Mistake Book entries...</span>
+        <div className="editorial-card p-12 flex flex-col items-center justify-center gap-3 border border-[var(--border)]">
+          <Loader2 className="w-6 h-6 animate-spin text-[var(--accent)]" />
+          <span className="text-xs font-medium text-[var(--text-secondary)]">Retrieving Mistake Book entries...</span>
         </div>
+      ) : error ? (
+        <ErrorState
+          title="Mistake Book Unavailable"
+          message={error}
+          onRetry={loadData}
+        />
       ) : items.length === 0 ? (
-        <div className="editorial-card p-12 text-center space-y-4">
-          <CheckCircle2 className="w-12 h-12 mx-auto text-emerald-500 opacity-80" />
-          <h3 className="headline text-xl">
-            {statusFilter === "pending"
-              ? "All caught up! No pending mistakes."
-              : "No questions logged in this category."}
-          </h3>
-          <p className="body-copy text-sm max-w-md mx-auto">
-            {statusFilter === "pending"
-              ? "Awesome work! Any future incorrect answers from mock tests or question banks will automatically appear here."
-              : "Complete a mock test or bookmark questions to populate your mistake records."}
-          </p>
-          <Link href="/mock-tests" className="brand-button text-xs font-mono px-4 py-2 inline-block">
-            Take a Practice Test
-          </Link>
+        <div className="space-y-4">
+          <EmptyState
+            illustration={<EmptyBookmarksIllustration size={110} />}
+            title={
+              !summary || summary.total_count === 0
+                ? "Your Mistake Book is ready!"
+                : statusFilter === "pending"
+                ? "All Caught Up! No Pending Mistakes"
+                : "No Questions Logged Yet"
+            }
+            description={
+              !summary || summary.total_count === 0
+                ? "Complete a practice question or mock test, and questions you get wrong will appear here for revision."
+                : statusFilter === "pending"
+                ? "Outstanding performance. You have mastered every question in your spaced repetition queue. Any future missed questions will appear here automatically."
+                : "Complete a full-length mock test or question bank drill to begin tracking conceptual areas that need reinforcement."
+            }
+            actionLabel="Take a Mock Test"
+            onAction={() => router.push("/mock-tests")}
+          />
+          {isGuest && (!summary || summary.total_count === 0) && (
+            <div className="text-center pt-2">
+              <button
+                type="button"
+                onClick={() => setIsAuthOpen(true)}
+                className="text-xs font-mono font-medium text-[var(--accent)] hover:underline"
+              >
+                Already have an account? Sign In to Sync your saved mistake history →
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-6">
@@ -246,26 +301,26 @@ export default function RevisionPage() {
             return (
               <div
                 key={item.id}
-                className={`editorial-card p-6 md:p-7 space-y-5 transition-all ${
-                  item.is_revised ? "opacity-75 bg-[var(--surface-elevated)]/50" : ""
+                className={`editorial-card p-6 md:p-7 space-y-5 border border-[var(--border)] shadow-xs transition-all ${
+                  item.is_revised ? "opacity-85 bg-[var(--surface-muted)]" : "bg-[var(--surface)]"
                 }`}
               >
                 {/* Meta Header */}
-                <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-mono border-b pb-3">
+                <div className="flex flex-wrap items-center justify-between gap-3 text-xs border-b border-[var(--border)] pb-3">
                   <div className="flex items-center gap-2">
-                    <span className="soft-badge px-2.5 py-1 text-[var(--brand-primary)] font-bold">
+                    <span className="badge-editorial text-xs font-semibold text-[var(--accent)] border-[var(--accent)]">
                       {item.exam_name}
                     </span>
                     {item.subject && (
-                      <span className="soft-badge px-2.5 py-1 text-[var(--text-secondary)]">
+                      <span className="badge-editorial text-xs text-[var(--text-secondary)] border-[var(--border)]">
                         {item.subject}
                       </span>
                     )}
                     <span
-                      className={`px-2 py-0.5 rounded font-semibold ${
+                      className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
                         item.mistake_count > 1
-                          ? "bg-rose-500/10 text-rose-600"
-                          : "bg-amber-500/10 text-amber-600"
+                          ? "bg-[var(--danger-soft)] text-[var(--danger)] border border-[color-mix(in_srgb,var(--danger)_30%,var(--border))]"
+                          : "bg-[var(--warning-soft)] text-amber-700 border border-amber-300"
                       }`}
                     >
                       Missed {item.mistake_count}x
@@ -274,7 +329,7 @@ export default function RevisionPage() {
 
                   <div className="flex items-center gap-3">
                     {item.next_review_at && !item.is_revised && (
-                      <span className="text-[11px] text-amber-600 flex items-center gap-1">
+                      <span className="text-[11px] text-amber-700 font-medium flex items-center gap-1">
                         <Clock className="w-3 h-3" />
                         Due for Review
                       </span>
@@ -283,10 +338,10 @@ export default function RevisionPage() {
                     <button
                       type="button"
                       onClick={() => handleToggleStatus(item)}
-                      className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                      className={`text-xs px-3 py-1 rounded-lg border font-medium transition-all ${
                         item.is_revised
-                          ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
-                          : "hover:bg-[var(--surface-elevated)] text-[var(--text-secondary)]"
+                          ? "bg-[var(--success-soft)] text-[var(--success)] border-[color-mix(in_srgb,var(--success)_30%,var(--border))]"
+                          : "bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-[var(--text-secondary)] border-[var(--border)]"
                       }`}
                     >
                       {item.is_revised ? "✓ Mastered" : "Mark as Mastered"}
@@ -295,8 +350,9 @@ export default function RevisionPage() {
                     <button
                       type="button"
                       onClick={() => handleDeleteItem(item.id)}
-                      className="text-[var(--text-secondary)] hover:text-rose-500 p-1"
+                      className="text-[var(--text-muted)] hover:text-[var(--danger)] p-1 rounded-md transition-colors"
                       title="Remove from Mistake Book"
+                      aria-label="Remove item"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -304,15 +360,15 @@ export default function RevisionPage() {
                 </div>
 
                 {/* Question Text */}
-                <h3 className="text-base font-semibold text-[var(--text-primary)] leading-relaxed">
-                  <span className="text-[var(--brand-primary)] mr-2 font-mono">Q{idx + 1}.</span>
+                <h3 className="text-base font-bold text-[var(--text-primary)] leading-relaxed">
+                  <span className="text-[var(--accent)] mr-2 font-mono">Q{idx + 1}.</span>
                   {item.question_text}
                 </h3>
 
-                {/* Interactive Retry Mode Options */}
+                {/* Active Retrieval Options */}
                 <div className="space-y-2.5">
-                  <span className="text-xs font-mono text-[var(--text-secondary)] block">
-                    ACTIVE RETRIEVAL RETRY:
+                  <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider block">
+                    Active Retrieval Practice:
                   </span>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                     {item.options.map((opt, optIdx) => {
@@ -329,14 +385,24 @@ export default function RevisionPage() {
                               [item.id]: letter,
                             }))
                           }
-                          className={`p-3 rounded-xl border text-left flex items-start gap-3 transition-colors ${
+                          className={`p-3.5 rounded-xl border text-left flex items-start gap-3 transition-all ${
                             isSelected
-                              ? "border-[var(--brand-primary)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] font-semibold"
-                              : "bg-[var(--surface)] hover:bg-[var(--surface-elevated)] text-[var(--text-primary)]"
+                              ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)] font-semibold shadow-xs"
+                              : "bg-[var(--surface-muted)] hover:bg-[var(--surface)] text-[var(--text-primary)] border-[var(--border)]"
                           }`}
                         >
-                          <span className="font-mono text-xs mt-0.5 opacity-70">{letter})</span>
-                          <span className="flex-1 leading-snug">{opt.replace(/^[A-D][.)]\s*/i, "")}</span>
+                          <span
+                            className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors ${
+                              isSelected
+                                ? "bg-[var(--accent)] text-white"
+                                : "bg-[var(--surface)] border border-[var(--border)] text-[var(--text-secondary)]"
+                            }`}
+                          >
+                            {letter}
+                          </span>
+                          <span className="flex-1 leading-snug pt-0.5">
+                            {opt.replace(/^[A-D][.)]\s*/i, "")}
+                          </span>
                         </button>
                       );
                     })}
@@ -344,54 +410,56 @@ export default function RevisionPage() {
                 </div>
 
                 {/* Retry Submit Action */}
-                <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t">
+                <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-[var(--border)]">
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
                       onClick={() => handleRetrySubmit(item)}
                       disabled={!currentSelected || retryingId === item.id}
-                      className="brand-button text-xs font-mono px-4 py-2 flex items-center gap-1.5 disabled:opacity-40"
+                      className="button-base button-primary px-4 py-2 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-40"
                     >
                       {retryingId === item.id ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
                       ) : (
                         <RotateCcw className="w-3.5 h-3.5" />
                       )}
-                      <span>Submit Retry</span>
+                      <span>Submit Answer</span>
                     </button>
 
                     {feedback && (
                       <span
-                        className={`text-xs font-mono font-bold flex items-center gap-1.5 ${
-                          feedback.is_correct ? "text-emerald-600" : "text-rose-600"
+                        className={`text-xs font-semibold flex items-center gap-1.5 ${
+                          feedback.is_correct ? "text-[var(--success)]" : "text-[var(--danger)]"
                         }`}
                       >
                         {feedback.is_correct ? (
                           <>
-                            <CheckCircle2 className="w-4 h-4" /> Correct! Rescheduled for +3 days.
+                            <CheckCircle2 className="w-4 h-4" /> Correct! Scheduled for review in 3 days.
                           </>
                         ) : (
                           <>
-                            <XCircle className="w-4 h-4" /> Still incorrect. Review explanation below.
+                            <XCircle className="w-4 h-4" /> Incorrect. Study the rationale below.
                           </>
                         )}
                       </span>
                     )}
                   </div>
 
-                  <span className="text-[11px] font-mono text-[var(--text-secondary)]">
-                    Correct: <strong>{item.correct_answer}</strong>
+                  <span className="text-xs text-[var(--text-muted)]">
+                    Official Key: <strong className="text-[var(--text-primary)]">{item.correct_answer}</strong>
                   </span>
                 </div>
 
-                {/* Explanation Box */}
+                {/* Academic Rationale Explanation Box */}
                 {(feedback || item.explanation) && (
-                  <div className="p-4 rounded-xl bg-[var(--surface-elevated)] border border-[var(--border-subtle)] space-y-1 text-sm leading-relaxed">
-                    <div className="flex items-center gap-1.5 font-mono text-xs font-bold text-[var(--brand-primary)]">
+                  <div className="p-4 rounded-xl bg-[var(--surface-muted)] border border-[var(--border)] space-y-1.5 text-sm leading-relaxed">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--accent)]">
                       <HelpCircle className="w-3.5 h-3.5" />
-                      <span>Academic Rational & Concept Review</span>
+                      <span>Academic Rationale & Concept Review</span>
                     </div>
-                    <p className="text-[var(--text-secondary)]">{item.explanation || "No explanation recorded."}</p>
+                    <p className="text-[var(--text-secondary)] text-xs md:text-sm">
+                      {item.explanation || "No additional explanation recorded."}
+                    </p>
                   </div>
                 )}
               </div>
@@ -404,7 +472,7 @@ export default function RevisionPage() {
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
         title="Sync Your Mistake Book"
-        subtitle="Sign in with Google or Email to preserve your missed questions, sync spaced repetition, and review on any device."
+        subtitle="Sign in to preserve your missed questions, sync spaced repetition intervals, and review across your devices."
       />
     </div>
   );

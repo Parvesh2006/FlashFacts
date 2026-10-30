@@ -101,3 +101,13 @@ openapi_runtime.json
 
 # Temporarily exclude unverified PYQ PDFs
 data/pyq_pdfs/*.pdf
+
+
+# Synthetic and generated PYQ archives
+data/pyq_pdfs_synthetic_archive/
+
+# Local backups and generated reports
+data/backups/
+# Temporary deployment audit files
+change-summary.txt
+deployment-review.txt

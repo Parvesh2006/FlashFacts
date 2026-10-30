@@ -52,16 +52,39 @@ def test_register_and_login_flow(client: TestClient):
     assert bad_login.status_code == 401
 
 
-def test_google_auth_flow(client: TestClient):
-    # 1. Test Google Auth with mock credential
+def test_google_auth_flow(client: TestClient, monkeypatch):
+    """Test Google auth with a mocked, verified tokeninfo response."""
+    import httpx
+    from app.api.v1 import auth
+
+    monkeypatch.setattr(auth.settings, "GOOGLE_CLIENT_ID", "test-client-id")
+
+    def fake_google_tokeninfo(*args, **kwargs):
+        assert kwargs["params"]["id_token"] == "valid-test-token"
+        return httpx.Response(
+            200,
+            json={
+                "aud": "test-client-id",
+                "email": "tamil_aspirant@gmail.com",
+                "email_verified": True,
+                "name": "Tamil Aspirant",
+                "sub": "google-test-subject-001",
+            },
+            request=httpx.Request(
+                "GET", "https://oauth2.googleapis.com/tokeninfo"
+            ),
+        )
+
+    monkeypatch.setattr(httpx, "get", fake_google_tokeninfo)
+
     res = client.post(
         "/api/v1/auth/google",
         json={
-            "credential": "mock_google_tamil_aspirant@gmail.com",
+            "credential": "valid-test-token",
             "target_exam": "TNPSC Group 2",
         },
     )
-    assert res.status_code == 200
+    assert res.status_code == 200, res.text
     data = res.json()
     assert "access_token" in data
     user = data["user"]
@@ -69,14 +92,12 @@ def test_google_auth_flow(client: TestClient):
     assert not user["is_guest"]
     assert user["target_exam"] == "TNPSC Group 2"
 
-    # 2. Re-authenticating returns the existing user
+    # Re-authenticating returns the existing user.
     res2 = client.post(
         "/api/v1/auth/google",
-        json={
-            "credential": "mock_google_tamil_aspirant@gmail.com",
-        },
+        json={"credential": "valid-test-token"},
     )
-    assert res2.status_code == 200
+    assert res2.status_code == 200, res2.text
     assert res2.json()["user"]["id"] == user["id"]
 
 
@@ -96,8 +117,8 @@ def test_guest_data_merge_on_registration(client: TestClient):
             "year": 2024,
             "subject": "General Tamil",
             "question_text": "Guest Merge Test Question தமிழ்",
-            "options": ["A. விடை 1", "B. விடை 2", "C. விடை 3", "D. விடை 4"],
-            "correct_answer": "A. விடை 1",
+            "options": ["A. à®µà®¿à®Ÿà¯ˆ 1", "B. à®µà®¿à®Ÿà¯ˆ 2", "C. à®µà®¿à®Ÿà¯ˆ 3", "D. à®µà®¿à®Ÿà¯ˆ 4"],
+            "correct_answer": "A. à®µà®¿à®Ÿà¯ˆ 1",
         },
     )
     assert pyq_res.status_code == 201

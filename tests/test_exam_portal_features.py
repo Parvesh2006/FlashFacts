@@ -86,7 +86,7 @@ def test_mock_test_negative_marking_and_mistake_book_integration(client: TestCli
     token = auth_res.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
-    # Create PYQ for test question pool
+    # Create PYQs for test question pool (2 questions so total_questions=2 can be fulfilled)
     client.post("/api/v1/pyqs/", json={
         "exam_name": "UPSC CSE",
         "year": 2023,
@@ -95,6 +95,15 @@ def test_mock_test_negative_marking_and_mistake_book_integration(client: TestCli
         "options": ["A. Liquidity control", "B. Taxation", "C. Subsidies", "D. Export promotion"],
         "correct_answer": "A. Liquidity control",
         "explanation": "Cash Reserve Ratio regulates money supply in the banking system."
+    })
+    client.post("/api/v1/pyqs/", json={
+        "exam_name": "UPSC CSE",
+        "year": 2023,
+        "subject": "Economy",
+        "question_text": "What does SLR stand for in Indian banking regulations?",
+        "options": ["A. Statutory Liquidity Ratio", "B. Special Loan Rate", "C. Sovereign Lending Ratio", "D. Secondary Liquidity Rate"],
+        "correct_answer": "A. Statutory Liquidity Ratio",
+        "explanation": "Statutory Liquidity Ratio is the minimum percentage of deposits that a commercial bank has to maintain in the form of liquid cash, gold or other securities."
     })
 
     # Create Mock Test with negative marking
@@ -115,11 +124,19 @@ def test_mock_test_negative_marking_and_mistake_book_integration(client: TestCli
     assert len(q_list) > 0
     q1 = q_list[0]
 
+    # Find the correct letter in shuffled options
+    corr_idx = next(
+        idx for idx, opt in enumerate(q1["options"])
+        if "liquidity control" in opt.lower() or "statutory liquidity ratio" in opt.lower()
+    )
+    corr_letter = chr(65 + corr_idx)
+    wrong_letter = "B" if corr_letter == "A" else "A"
+
     # Submit an incorrect answer to verify negative marking and auto-logging to mistake book
     submit_res = client.post(
         f"/api/v1/mock-tests/{test_id}/attempts",
         json={
-            "answers": {str(q1["id"]): "B"},  # Incorrect
+            "answers": {str(q1["id"]): wrong_letter},  # Incorrect
             "time_taken_seconds": 120,
         },
         headers=headers,
@@ -143,7 +160,7 @@ def test_mock_test_negative_marking_and_mistake_book_integration(client: TestCli
     # Retry the mistake with the correct answer
     retry_res = client.post(
         f"/api/v1/revision/{mistake_item['id']}/retry",
-        json={"selected_answer": "A"},  # Correct
+        json={"selected_answer": mistake_item["correct_answer"]},  # Correct
         headers=headers,
     )
     assert retry_res.status_code == 200

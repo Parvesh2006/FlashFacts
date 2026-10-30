@@ -105,21 +105,21 @@ export function CalendarView() {
 
   const selectedDayStat = selectedDate ? dayStatsMap[selectedDate] : null;
 
-  // Visual intensity color helper based on event count
+  // Visual intensity color helper
   const getIntensityClass = (count: number, isSelected: boolean) => {
     if (isSelected) {
-      return "border-2 border-[var(--brand-primary)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] shadow-md font-bold";
+      return "border-2 border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)] shadow-xs font-bold";
     }
     if (count === 0) {
-      return "border bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-raised)]";
+      return "border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--text-muted)] hover:bg-[var(--surface-muted)]";
     }
     if (count <= 3) {
-      return "border border-[var(--accent-border)] bg-[var(--accent-soft)] text-[var(--accent)] hover:border-[var(--accent)]";
+      return "border border-[color-mix(in_srgb,var(--accent)_30%,var(--border))] bg-[var(--accent-soft)] text-[var(--accent)] hover:border-[var(--accent)]";
     }
     if (count <= 8) {
-      return "border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] hover:border-[var(--brand-primary)]";
+      return "border border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)] font-semibold hover:border-[var(--accent)]";
     }
-    return "border border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white font-bold shadow-sm";
+    return "border border-[var(--accent)] bg-[var(--accent)] text-white font-bold shadow-xs";
   };
 
   const formattedMonthHeader = new Date(yearNum, monthNum - 1, 1).toLocaleDateString("en-US", {
@@ -128,44 +128,46 @@ export function CalendarView() {
   });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-6xl mx-auto page-enter">
       <BackButton fallbackHref="/" />
 
       {/* Calendar Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border)] pb-5">
         <div>
-          <div className="eyebrow flex items-center gap-2 mb-1">
-            <CalendarIcon className="w-4 h-4" />
-            <span>Temporal Event Explorer</span>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="badge-editorial text-xs text-[var(--accent)] border-[var(--accent)] font-semibold">
+              TEMPORAL INTELLIGENCE
+            </span>
+            <span className="text-xs text-[var(--text-muted)]">• Daily Exam Records</span>
           </div>
-          <h1 className="headline text-3xl md:text-4xl">
+          <h1 className="headline text-3xl md:text-4xl text-[var(--text-primary)] font-bold tracking-tight">
             Historical Intelligence Calendar
           </h1>
-          <p className="body-copy text-sm">
-            Browse indexed news events day-by-day across all domain categories.
+          <p className="body-copy text-sm text-[var(--text-secondary)] mt-1.5">
+            Navigate through indexed current affairs events day-by-day across all syllabus classifications.
           </p>
         </div>
 
         {/* Month Navigation Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           <button
             type="button"
             onClick={handlePrevMonth}
-            className="control icon-button"
+            className="button-base button-secondary p-2 rounded-lg"
             title="Previous Month"
             aria-label="Previous month"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
 
-          <span className="control font-mono text-sm font-bold px-4 py-1.5 min-w-[140px] text-center">
+          <span className="text-xs font-bold font-mono px-4 py-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--text-primary)] min-w-[140px] text-center shadow-xs">
             {formattedMonthHeader}
           </span>
 
           <button
             type="button"
             onClick={handleNextMonth}
-            className="control icon-button"
+            className="button-base button-secondary p-2 rounded-lg"
             title="Next Month"
             aria-label="Next month"
           >
@@ -175,7 +177,7 @@ export function CalendarView() {
           <button
             type="button"
             onClick={handleToday}
-            className="brand-button px-3 py-1.5 text-xs font-mono font-semibold"
+            className="button-base button-primary px-3 py-2 text-xs font-semibold"
           >
             Today
           </button>
@@ -186,9 +188,9 @@ export function CalendarView() {
         <ErrorState message={calendarError} onRetry={() => fetchCalendar(activeMonth)} />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Month Grid (2 Columns on desktop) */}
-          <div className="editorial-card p-5 space-y-4 lg:col-span-2">
-            <div className="grid grid-cols-7 text-center font-mono text-[11px] font-semibold text-[var(--text-secondary)] uppercase border-b pb-2">
+          {/* Main Month Grid */}
+          <div className="editorial-card p-5 md:p-6 space-y-4 lg:col-span-2 border border-[var(--border)] bg-[var(--surface)] shadow-xs">
+            <div className="grid grid-cols-7 text-center text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider border-b border-[var(--border)] pb-2.5">
               <span>Sun</span>
               <span>Mon</span>
               <span>Tue</span>
@@ -200,14 +202,14 @@ export function CalendarView() {
 
             {/* Grid Days Cells */}
             {loadingCalendar ? (
-              <div className="h-64 flex items-center justify-center font-mono text-xs text-[var(--text-secondary)]">
-                Loading monthly calendar matrix...
+              <div className="h-64 flex items-center justify-center text-xs text-[var(--text-secondary)]">
+                Loading calendar matrix...
               </div>
             ) : (
               <div className="grid grid-cols-7 gap-2">
                 {/* Empty cells for preceding month padding */}
                 {Array.from({ length: firstDayOfWeek }).map((_, i) => (
-                  <div key={`empty-${i}`} className="h-16 rounded-lg bg-[var(--surface-muted)]/60 border" />
+                  <div key={`empty-${i}`} className="h-16 rounded-xl bg-[var(--surface-muted)]/50 border border-transparent" />
                 ))}
 
                 {/* Days of current month */}
@@ -225,19 +227,19 @@ export function CalendarView() {
                       onClick={() => setSelectedDate(dateStr)}
                       aria-pressed={isSelected}
                       aria-label={`${formatDate(dateStr)}${total ? `, ${total} events` : ", no events"}`}
-                      className={`h-16 rounded-lg p-2 flex flex-col justify-between text-left transition-all ${getIntensityClass(
+                      className={`h-16 rounded-xl p-2 flex flex-col justify-between text-left transition-all ${getIntensityClass(
                         total,
                         isSelected
                       )}`}
                     >
-                      <span className="font-mono text-xs font-semibold">{dayNum}</span>
+                      <span className="text-xs font-semibold font-mono">{dayNum}</span>
                       <div className="flex items-center justify-between text-[10px] font-mono">
                         {total > 0 ? (
-                          <span className="px-1.5 py-0.5 rounded bg-[var(--surface)] border text-[var(--text-primary)] font-bold">
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${isSelected ? "bg-white text-[var(--accent)]" : "bg-[var(--surface)] border border-[var(--border)] text-[var(--text-primary)]"}`}>
                             {total} {total === 1 ? "evt" : "evts"}
                           </span>
                         ) : (
-                          <span className="text-[var(--text-muted)]">-</span>
+                          <span className="text-[var(--text-muted)] opacity-50">-</span>
                         )}
                       </div>
                     </button>
@@ -247,59 +249,59 @@ export function CalendarView() {
             )}
 
             {/* Intensity Legend */}
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t meta-text">
-              <span className="flex items-center gap-1.5">
-                <Info className="w-3.5 h-3.5 accent-mark" />
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[var(--border)] text-xs text-[var(--text-muted)]">
+              <span className="flex items-center gap-1.5 text-xs font-medium">
+                <Info className="w-3.5 h-3.5 text-[var(--accent)]" />
                 Volume Intensity:
               </span>
-              <div className="flex items-center gap-3">
-                <span className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded bg-[var(--surface)] border" /> 0
+              <div className="flex items-center gap-3 text-xs">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded bg-[var(--surface)] border border-[var(--border)]" /> 0
                 </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded bg-[var(--accent-soft)] border border-[var(--accent-border)]" /> 1-3
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded bg-[var(--accent-soft)] border border-[color-mix(in_srgb,var(--accent)_30%,var(--border))]" /> 1-3
                 </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded bg-[var(--brand-primary-soft)] border border-[var(--brand-primary-border)]" /> 4-8
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded bg-[var(--accent-soft)] border border-[var(--accent)]" /> 4-8
                 </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded bg-[var(--brand-primary)] border border-[var(--brand-primary)]" /> 9+
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded bg-[var(--accent)]" /> 9+
                 </span>
               </div>
             </div>
           </div>
 
           {/* Selected Date Summary Sidebar Panel */}
-          <div className="editorial-card p-5 space-y-4 flex flex-col justify-between">
+          <div className="editorial-card p-5 md:p-6 space-y-4 flex flex-col justify-between border border-[var(--border)] bg-[var(--surface)] shadow-xs">
             <div className="space-y-4">
-              <div className="border-b pb-3">
-                <span className="eyebrow block">
-                  Selected Date Summary
+              <div className="border-b border-[var(--border)] pb-3">
+                <span className="badge-editorial text-[10px] text-[var(--accent)] border-[var(--accent)] mb-1">
+                  DATE SUMMARY
                 </span>
-                <h3 className="headline text-xl">
+                <h3 className="headline text-lg font-bold text-[var(--text-primary)]">
                   {selectedDate ? formatDate(selectedDate) : "Select a Date"}
                 </h3>
               </div>
 
               {selectedDayStat ? (
-                <div className="space-y-4 font-mono text-xs">
-                  <div className="editorial-panel p-3 flex items-center justify-between">
-                    <span className="text-[var(--text-secondary)]">Total Indexed Events:</span>
-                    <span className="text-base font-bold text-[var(--brand-primary)]">{selectedDayStat.total}</span>
+                <div className="space-y-4 text-xs">
+                  <div className="p-3.5 rounded-xl bg-[var(--surface-muted)] border border-[var(--border)] flex items-center justify-between">
+                    <span className="text-[var(--text-secondary)] font-medium">Total Indexed Events:</span>
+                    <span className="text-xl font-bold font-serif text-[var(--accent)]">{selectedDayStat.total}</span>
                   </div>
 
                   {/* Domain Breakdown */}
                   <div>
-                    <h4 className="meta-text uppercase mb-2 flex items-center gap-1">
-                      <Layers className="w-3 h-3 accent-mark" />
+                    <h4 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2 flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5 text-[var(--accent)]" />
                       Domain Distribution
                     </h4>
                     {Object.keys(selectedDayStat.domains || {}).length > 0 ? (
-                      <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                      <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
                         {Object.entries(selectedDayStat.domains).map(([domain, count]) => (
                           <div
                             key={domain}
-                            className="flex items-center justify-between p-2 rounded-md bg-[var(--surface-muted)] border"
+                            className="flex items-center justify-between p-2.5 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)]"
                           >
                             <DomainBadge domain={domain} />
                             <span className="font-bold text-[var(--text-primary)]">{count}</span>
@@ -307,13 +309,13 @@ export function CalendarView() {
                         ))}
                       </div>
                     ) : (
-                      <p className="text-[var(--text-muted)] italic text-[11px]">No domain activity recorded.</p>
+                      <p className="text-[var(--text-muted)] italic text-xs">No domain activity recorded for this day.</p>
                     )}
                   </div>
                 </div>
               ) : (
-                <p className="meta-text">
-                  Click any calendar date to view volume breakdown and individual current affairs.
+                <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                  Select any date on the calendar matrix to inspect event distribution and individual current affairs entries.
                 </p>
               )}
             </div>
@@ -323,14 +325,14 @@ export function CalendarView() {
 
       {/* Selected Date Events List Section */}
       {selectedDate && (
-        <section className="space-y-4 pt-4 border-t">
+        <section className="space-y-4 pt-4 border-t border-[var(--border)]">
           <div className="flex items-center justify-between">
-            <h2 className="headline text-2xl flex items-center gap-2">
-              <Sparkles className="w-4 h-4 accent-mark" />
+            <h2 className="headline text-xl font-bold text-[var(--text-primary)] flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-[var(--accent)]" />
               <span>Events for {formatDate(selectedDate)}</span>
             </h2>
-            <span className="meta-text">
-              {selectedEvents.length} {selectedEvents.length === 1 ? "Event" : "Events"} Found
+            <span className="text-xs text-[var(--text-muted)] font-mono">
+              {selectedEvents.length} {selectedEvents.length === 1 ? "Event" : "Events"}
             </span>
           </div>
 

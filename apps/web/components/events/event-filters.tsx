@@ -63,38 +63,38 @@ export function EventFilters({
   };
 
   return (
-    <div className="editorial-card p-4 space-y-4 mb-6">
-      <div className="flex items-center justify-between border-b pb-3">
-        <div className="flex items-center gap-2 text-xs font-mono font-semibold text-[var(--text-primary)]">
-          <Filter className="w-4 h-4 accent-mark" />
-          <span>EVENT INTELLIGENCE FILTERS</span>
+    <div className="editorial-card p-4 md:p-5 space-y-4 mb-6 shadow-xs border border-[var(--border)]">
+      <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-primary)]">
+          <Filter className="w-3.5 h-3.5 text-[var(--accent)]" />
+          <span>Filter Intelligence Archive</span>
         </div>
 
         {hasActiveFilters && (
           <button
             onClick={onReset}
-            className="flex items-center gap-1.5 text-xs font-mono text-[var(--brand-primary)] transition-colors"
+            className="flex items-center gap-1.5 text-xs text-[var(--accent)] hover:underline font-medium transition-colors"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Reset Filters</span>
+            <RotateCcw className="w-3 h-3" />
+            <span>Clear Filters</span>
           </button>
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs font-mono">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
         <div>
-          <label className="block meta-text mb-1 flex items-center gap-1">
-            <Tag className="w-3 h-3 accent-mark" />
+          <label className="block text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-1 flex items-center gap-1">
+            <Tag className="w-3 h-3 text-[var(--accent)]" />
             <span>Domain Category</span>
           </label>
 
           <select
             value={selectedDomain || ""}
             onChange={(e) => onDomainChange(e.target.value || undefined)}
-            className="control-input w-full px-3 py-2 focus:outline-none focus:border-[var(--brand-primary)]"
+            className="w-full px-3 py-2 text-xs rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] focus:bg-[var(--surface)] transition-all"
+            aria-label="Filter by domain"
           >
-            <option value="">All Domains</option>
-
+            <option value="">All Domains ({domains.reduce((acc, d) => acc + d.count, 0)})</option>
             {domains.map((d) => (
               <option key={d.domain} value={d.domain}>
                 {d.domain} ({d.count})
@@ -104,21 +104,22 @@ export function EventFilters({
         </div>
 
         <div>
-          <label className="block meta-text mb-1 flex items-center gap-1">
-            <Calendar className="w-3 h-3 accent-mark" />
-            <span>Exact Event Date</span>
+          <label className="block text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-1 flex items-center gap-1">
+            <Calendar className="w-3 h-3 text-[var(--accent)]" />
+            <span>Specific Event Date</span>
           </label>
 
           <input
             type="date"
             value={selectedDate || ""}
             onChange={(e) => onDateChange(e.target.value || undefined)}
-            className="control-input w-full px-3 py-1.5 focus:outline-none focus:border-[var(--brand-primary)]"
+            className="w-full px-3 py-2 text-xs rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] focus:bg-[var(--surface)] transition-all"
+            aria-label="Filter by exact date"
           />
         </div>
 
         <div>
-          <label className="block meta-text mb-1">
+          <label className="block text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-1">
             From Date
           </label>
 
@@ -126,12 +127,13 @@ export function EventFilters({
             type="date"
             value={localStartDate}
             onChange={(e) => handleStartDateChange(e.target.value)}
-            className="control-input w-full px-3 py-1.5 focus:outline-none focus:border-[var(--brand-primary)]"
+            className="w-full px-3 py-2 text-xs rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] focus:bg-[var(--surface)] transition-all"
+            aria-label="Filter from start date"
           />
         </div>
 
         <div>
-          <label className="block meta-text mb-1">
+          <label className="block text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-1">
             To Date
           </label>
 
@@ -139,7 +141,8 @@ export function EventFilters({
             type="date"
             value={localEndDate}
             onChange={(e) => handleEndDateChange(e.target.value)}
-            className="control-input w-full px-3 py-1.5 focus:outline-none focus:border-[var(--brand-primary)]"
+            className="w-full px-3 py-2 text-xs rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] focus:bg-[var(--surface)] transition-all"
+            aria-label="Filter through end date"
           />
         </div>
       </div>

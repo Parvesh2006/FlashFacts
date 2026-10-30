@@ -12,14 +12,50 @@ export class ApiError extends Error {
   }
 }
 
+type TokenProvider = () => Promise<string | null>;
+let asyncTokenProvider: TokenProvider | null = null;
+
+export function setTokenProvider(provider: TokenProvider) {
+  asyncTokenProvider = provider;
+}
+
+function getActiveToken(): string | null {
+  if (typeof window === "undefined") return null;
+  // 1. Persistent authenticated student session in localStorage
+  try {
+    const studentUserRaw = localStorage.getItem("flashfacts_auth_user");
+    if (studentUserRaw) {
+      const u = JSON.parse(studentUserRaw);
+      if (!u.is_guest) {
+        const studentToken = localStorage.getItem("flashfacts_auth_token");
+        if (studentToken) return studentToken;
+      }
+    }
+  } catch {}
+
+  // 2. Active guest session in sessionStorage (isolated to current browser session)
+  try {
+    const guestToken = sessionStorage.getItem("flashfacts_guest_token");
+    if (guestToken) return guestToken;
+  } catch {}
+
+  return null;
+}
+
 export async function fetchApi<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
   const url = `${BASE_URL}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
 
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("flashfacts_auth_token") : null;
+  let token = getActiveToken();
+  if (!token && asyncTokenProvider && typeof window !== "undefined" && !endpoint.includes("/auth/")) {
+    try {
+      token = await asyncTokenProvider();
+    } catch {
+      // Proceed unauthenticated if provider fails
+    }
+  }
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",

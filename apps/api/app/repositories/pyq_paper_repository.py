@@ -24,6 +24,7 @@ class PYQPaperRepository:
         year: Optional[int] = None,
         subject: Optional[str] = None,
         language: Optional[str] = None,
+        availability: Optional[str] = None,
         search_query: Optional[str] = None,
         limit: int = 50,
         offset: int = 0,
@@ -40,6 +41,8 @@ class PYQPaperRepository:
             query = query.filter(PYQPaper.subject.ilike(f"%{subject.strip()}%"))
         if language:
             query = query.filter(PYQPaper.language.ilike(f"%{language.strip()}%"))
+        if availability:
+            query = query.filter(PYQPaper.availability_status == availability.strip())
         if search_query:
             sq = f"%{search_query.strip()}%"
             query = query.filter(

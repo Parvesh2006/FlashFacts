@@ -1,37 +1,19 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
-  Settings,
-  Server,
-  Rss,
-  CheckCircle2,
-  XCircle,
-  ExternalLink,
-  Shield,
   User,
   GraduationCap,
   LogOut,
   Sparkles,
-  Lock,
+  ShieldCheck,
+  BookOpen,
 } from "lucide-react";
-import { api } from "@/lib/api";
-import { getSources } from "@/services/sources";
-import { Source } from "@/types/source";
 import { BackButton } from "@/components/navigation/back-button";
 import { useAuth } from "@/lib/auth";
 import { AuthModal } from "@/components/auth/auth-modal";
 
-interface HealthCheck {
-  status: string;
-}
-
 export default function SettingsPage() {
-  const [apiUrl, setApiUrl] = useState<string>("");
-  const [healthStatus, setHealthStatus] = useState<"checking" | "online" | "offline">("checking");
-  const [healthDetails, setHealthDetails] = useState<HealthCheck | null>(null);
-  const [sources, setSources] = useState<Source[]>([]);
-  const [loadingSources, setLoadingSources] = useState<boolean>(true);
   const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
   const [updatingExam, setUpdatingExam] = useState<boolean>(false);
 
@@ -43,28 +25,8 @@ export default function SettingsPage() {
     "TNPSC Group 1",
     "UPSC CSE Prelims",
     "SSC CGL",
+    "RRB NTPC",
   ];
-
-  useEffect(() => {
-    setApiUrl(process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000");
-
-    // Check FastAPI /health endpoint
-    api
-      .get<HealthCheck>("/health")
-      .then((res) => {
-        setHealthStatus("online");
-        setHealthDetails(res);
-      })
-      .catch(() => {
-        setHealthStatus("offline");
-      });
-
-    // Fetch permitted RSS sources list
-    getSources()
-      .then(setSources)
-      .catch(() => setSources([]))
-      .finally(() => setLoadingSources(false));
-  }, []);
 
   const handleTargetExamChange = async (newExam: string) => {
     setUpdatingExam(true);
@@ -78,60 +40,68 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-4xl mx-auto page-enter">
       <BackButton fallbackHref="/" />
 
       {/* Header */}
-      <div className="border-b pb-4">
-        <div className="eyebrow flex items-center gap-2 mb-1">
-          <Settings className="w-4 h-4" />
-          <span>System Configuration & Aspirant Profile</span>
+      <div className="border-b border-[var(--border)] pb-5">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="badge-editorial text-xs text-[var(--accent)] border-[var(--accent)] font-semibold">
+            ASPIRANT PREFERENCES
+          </span>
+          <span className="text-xs text-[var(--text-muted)]">• Study Profile</span>
         </div>
-        <h1 className="headline text-3xl md:text-4xl">Settings</h1>
-        <p className="body-copy text-sm">
-          Aspirant profile, target exam preferences, API connection state, and source registry status.
+        <h1 className="headline text-3xl md:text-4xl text-[var(--text-primary)] font-bold tracking-tight">
+          Settings & Preferences
+        </h1>
+        <p className="body-copy text-sm text-[var(--text-secondary)] mt-1.5">
+          Configure your target examination, study preferences, and account synchronization across devices.
         </p>
       </div>
 
-      {/* 1. Aspirant Profile & Authentication */}
-      <div className="editorial-card p-5 md:p-6 space-y-4">
-        <div className="flex items-center justify-between border-b pb-3">
-          <h2 className="text-sm font-bold text-[var(--text-primary)] font-mono flex items-center gap-2">
-            <User className="w-4 h-4 accent-mark" />
-            <span>Aspirant Profile & Authentication</span>
+      {/* 1. Aspirant Profile & Target Exam */}
+      <div className="editorial-card p-5 md:p-6 space-y-4 border border-[var(--border)] bg-[var(--surface)] shadow-xs">
+        <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
+          <h2 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
+            <User className="w-4 h-4 text-[var(--accent)]" />
+            <span>Aspirant Profile & Target Examination</span>
           </h2>
           {isStudent && (
-            <span className="soft-badge px-2 py-0.5 text-[10px] font-mono text-emerald-500 uppercase">
-              Registered Student
+            <span className="badge-editorial text-[10px] text-[var(--success)] border-[color-mix(in_srgb,var(--success)_30%,var(--border))] font-semibold">
+              Authenticated Student
             </span>
           )}
           {isGuest && (
-            <span className="soft-badge px-2 py-0.5 text-[10px] font-mono text-amber-500 uppercase">
-              Guest Profile
+            <span className="badge-editorial text-[10px] text-amber-700 border-amber-300 font-semibold">
+              Guest Session
             </span>
           )}
         </div>
 
         {user ? (
-          <div className="space-y-4 font-mono text-xs">
+          <div className="space-y-4 text-xs">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="editorial-panel p-4 space-y-1">
-                <span className="text-[var(--text-secondary)] text-[10px] uppercase block">Username</span>
+              <div className="p-4 rounded-xl bg-[var(--surface-muted)] border border-[var(--border)] space-y-1">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] block">
+                  Aspirant Username
+                </span>
                 <span className="text-sm font-bold text-[var(--text-primary)]">{user.username}</span>
                 {user.email && (
-                  <span className="text-[11px] text-[var(--text-secondary)] block truncate">
+                  <span className="text-xs text-[var(--text-secondary)] block truncate">
                     {user.email}
                   </span>
                 )}
               </div>
 
-              <div className="editorial-panel p-4 space-y-2">
-                <span className="text-[var(--text-secondary)] text-[10px] uppercase block">Target Exam</span>
+              <div className="p-4 rounded-xl bg-[var(--surface-muted)] border border-[var(--border)] space-y-2">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] block">
+                  Current Target Exam
+                </span>
                 <select
                   disabled={updatingExam}
                   value={user.target_exam}
                   onChange={(e) => handleTargetExamChange(e.target.value)}
-                  className="control-input w-full py-1.5 px-2 text-xs font-mono"
+                  className="w-full py-2 px-3 text-xs rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] cursor-pointer"
                 >
                   {exams.map((ex) => (
                     <option key={ex} value={ex}>
@@ -143,28 +113,30 @@ export default function SettingsPage() {
             </div>
 
             {isGuest ? (
-              <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="p-4 rounded-xl border border-[color-mix(in_srgb,var(--accent)_30%,var(--border))] bg-[var(--accent-soft)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="space-y-0.5">
-                  <div className="font-semibold text-amber-600 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>Temporary Guest Session</span>
+                  <div className="font-semibold text-[var(--accent)] flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4" />
+                    <span>Active Guest Session</span>
                   </div>
-                  <p className="text-[11px] text-[var(--text-secondary)]">
-                    Upgrade to a permanent student account to sync your Mistake Book and test history across devices.
+                  <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                    Test attempts and mistakes are saved for this browser session. Create an account to permanently sync your Mistake Book and scores across all your devices.
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setIsAuthOpen(true)}
-                  className="btn btn-primary px-3 py-1.5 text-xs whitespace-nowrap"
+                  className="button-base button-primary px-3 py-1.5 text-xs whitespace-nowrap font-semibold shadow-xs"
                 >
-                  Sign In / Merge Account
+                  Sign In / Register
                 </button>
               </div>
             ) : (
               <div className="flex justify-end pt-2">
                 <button
+                  type="button"
                   onClick={() => logout()}
-                  className="btn btn-secondary px-3 py-1.5 text-xs flex items-center gap-1.5 text-rose-500 hover:text-rose-600"
+                  className="button-base button-secondary px-3.5 py-1.5 text-xs flex items-center gap-1.5 text-[var(--danger)] hover:bg-[var(--danger-soft)] cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span>Sign Out</span>
@@ -173,115 +145,20 @@ export default function SettingsPage() {
             )}
           </div>
         ) : (
-          <div className="p-6 text-center space-y-3 font-mono text-xs">
+          <div className="p-6 text-center space-y-3 text-xs">
             <p className="text-[var(--text-secondary)]">
               No authenticated account is currently active.
             </p>
             <button
+              type="button"
               onClick={() => setIsAuthOpen(true)}
-              className="btn btn-primary px-4 py-2 text-xs mx-auto"
+              className="button-base button-primary px-4 py-2 text-xs mx-auto font-semibold"
             >
               Sign In or Register
             </button>
           </div>
         )}
       </div>
-
-      {/* 2. API Connection & Telemetry */}
-      <div className="editorial-card p-5 md:p-6 space-y-4">
-        <h2 className="text-sm font-bold text-[var(--text-primary)] font-mono flex items-center gap-2 border-b pb-3">
-          <Server className="w-4 h-4 accent-mark" />
-          <span>API Backend Connection Status</span>
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono text-xs">
-          <div className="editorial-panel p-4 space-y-2">
-            <span className="text-[var(--text-secondary)] text-[11px] uppercase block">Configured API Base URL</span>
-            <div className="flex flex-wrap items-center justify-between gap-2 text-[var(--text-primary)]">
-              <span className="font-semibold text-[var(--brand-primary)] break-all">{apiUrl}</span>
-              <span className="soft-badge text-[10px] px-2 py-0.5">NEXT_PUBLIC_API_URL</span>
-            </div>
-          </div>
-
-          <div className="editorial-panel p-4 space-y-2">
-            <span className="text-[var(--text-secondary)] text-[11px] uppercase block">FastAPI Health Response</span>
-            <div className="flex items-center justify-between">
-              {healthStatus === "checking" ? (
-                <span className="text-[var(--text-secondary)] animate-pulse">Checking status...</span>
-              ) : healthStatus === "online" ? (
-                <span className="status-success inline-flex items-center gap-1.5 px-2 py-1 font-bold">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Backend Ready ({healthDetails?.status || "ok"})</span>
-                </span>
-              ) : (
-                <span className="status-danger inline-flex items-center gap-1.5 px-2 py-1 font-bold">
-                  <XCircle className="w-4 h-4" />
-                  <span>Connection Failed</span>
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Permitted RSS Sources Registry Status */}
-      <div className="editorial-card p-5 md:p-6 space-y-4">
-        <div className="flex items-center justify-between gap-3 border-b pb-3">
-          <h2 className="text-sm font-bold text-[var(--text-primary)] font-mono flex items-center gap-2">
-            <Rss className="w-4 h-4 accent-mark" />
-            <span>Permitted News Sources Registry</span>
-          </h2>
-          <span className="meta-text text-right">{sources.length} Registered Sources</span>
-        </div>
-
-        {loadingSources ? (
-          <p className="meta-text">Loading sources registry...</p>
-        ) : (
-          <div className="space-y-2">
-            {sources.map((src) => (
-              <div
-                key={src.id}
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 editorial-panel p-3 text-xs font-mono"
-              >
-                <div className="flex items-start gap-3 min-w-0">
-                  <span className="w-2 h-2 rounded-full bg-[var(--success)] mt-1.5 flex-shrink-0" />
-                  <div className="min-w-0">
-                    <h4 className="font-bold text-[var(--text-primary)]">{src.name}</h4>
-                    <span className="text-[11px] text-[var(--text-secondary)] break-all">{src.feed_url}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 text-[var(--text-secondary)] sm:flex-shrink-0">
-                  <span className="soft-badge text-[10px] px-2 py-0.5">
-                    Reliability: {Math.round(src.reliability_score * 100)}%
-                  </span>
-                  <a
-                    href={src.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-[var(--brand-primary)] transition-colors"
-                    aria-label={`Open ${src.name} website`}
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* 4. Platform System Information */}
-      <div className="editorial-panel p-4 text-xs font-mono text-[var(--text-secondary)] space-y-1">
-        <div className="flex items-center gap-2 text-[var(--text-primary)] font-semibold mb-1">
-          <Shield className="w-4 h-4 accent-mark" />
-          <span>FlashFacts Intelligence Platform Architecture</span>
-        </div>
-        <p>Frontend: Next.js 15 (App Router, TypeScript, Tailwind CSS)</p>
-        <p>Backend Engine: FastAPI Python 3.11 (PostgreSQL / Redis, Alembic)</p>
-        <p>Authentication: Dual Auth (Google Sign-In + Email/Password + Anonymous Guest)</p>
-      </div>
-
       <AuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}

@@ -26,6 +26,7 @@ api_router.include_router(health.router)
 
 # V1 API Endpoints under /api/v1
 v1_router = APIRouter(prefix="/api/v1")
+v1_router.include_router(health.router, tags=["health"])
 v1_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 v1_router.include_router(sources.router)
 v1_router.include_router(events.router)

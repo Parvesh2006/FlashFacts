@@ -123,19 +123,15 @@ def get_current_user(
     db: Session = Depends(get_db),
 ):
     """
-    Returns the authenticated User or creates an auto-provisioned guest user if none provided.
-    Guarantees that every request has a verified, isolated student user profile.
-    Raises 401 if a token was supplied but is invalid or expired.
+    Returns the authenticated User (registered student or initialized guest with a valid token).
+    Raises 401 Unauthorized if no credentials are provided or if the token is invalid/expired.
+    Prevents accidental guest row creation on unauthenticated requests.
     """
-    from app.models.user import User
-
     user = get_current_user_optional(auth, db)
-    if user:
-        return user
-
-    # Auto-provision a guest user session to ensure zero blockers for new students without headers
-    new_user = User.create_guest()
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return new_user
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user

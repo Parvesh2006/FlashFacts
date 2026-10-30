@@ -1,5 +1,4 @@
 from datetime import datetime, date
-from typing import List, Optional
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -54,6 +53,13 @@ class EventBase(BaseModel):
     classification_confidence: float = 1.0
     ai_processed_at: Optional[datetime] = None
     processing_status: str = "completed"
+
+    # News Relevance & Syllabus Quality Fields
+    is_exam_eligible: bool = True
+    rejection_reason: Optional[str] = None
+    inclusion_reason: Optional[str] = None
+    syllabus_topic: Optional[str] = None
+
 
 class EventCreate(EventBase):
     dedup_hash: str

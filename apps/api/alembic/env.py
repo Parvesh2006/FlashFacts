@@ -22,7 +22,12 @@ if config.config_file_name:
 target_metadata = Base.metadata
 
 def get_url():
-    return settings.DATABASE_URL
+    url = settings.DATABASE_URL
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql+psycopg2://", 1)
+    elif url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
+    return url
 
 def run_migrations_offline() -> None:
     url = get_url()
@@ -38,7 +43,7 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     configuration = config.get_section(config.config_ini_section)
-    configuration["sqlalchemy.url"] = get_url().replace("postgresql://", "postgresql+psycopg2://", 1)
+    configuration["sqlalchemy.url"] = get_url()
     connectable = engine_from_config(
         configuration,
         prefix="sqlalchemy.",

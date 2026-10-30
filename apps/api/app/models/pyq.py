@@ -15,6 +15,9 @@ class PYQ(Base):
     source = Column(String(255), nullable=True)
     language = Column(String(10), nullable=False, default="en")
     is_verified = Column(Boolean, nullable=False, default=True)
+    question_type = Column(String(50), nullable=False, default="syllabus_practice", index=True)
+    quality_status = Column(String(50), nullable=False, default="valid", index=True)
+    rejection_reason = Column(String(255), nullable=True)
 
     question_text = Column(Text, nullable=False)
     options = Column(JSON, nullable=False)  # list of string options

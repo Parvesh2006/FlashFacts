@@ -118,16 +118,13 @@ class FallbackAIProvider(AIProvider):
         domain: str,
         reliability_score: float = 1.0
     ) -> Dict[str, Any]:
-        text_full = f"{title}. {content}".strip()
+        from app.services.content_cleaner import ContentCleaningService
+        clean_title = ContentCleaningService.clean_html(title or "")
+        clean_content = ContentCleaningService.clean_article_text(clean_title, content or "")
+        summary = ContentCleaningService.build_clean_summary(clean_title, clean_content, max_words=75)
+        text_full = f"{clean_title}. {clean_content}".strip()
         predicted_domain = self._infer_domain(text_full, domain)
         event_type = self._infer_event_type(text_full)
-
-        # 1. Summary Generation (Concise, max 100 words)
-        words = text_full.split()
-        if len(words) > 80:
-            summary = " ".join(words[:80]) + "..."
-        else:
-            summary = text_full
 
         # 2. Why it matters generation
         story_lower = text_full.lower()
@@ -267,9 +264,10 @@ class FallbackAIProvider(AIProvider):
 
 
 class OpenAIProvider(AIProvider):
-    def __init__(self, api_key: str, model: str = "gpt-4o-mini"):
+    def __init__(self, api_key: str, model: str = "gpt-4o-mini", base_url: Optional[str] = None):
         self.api_key = api_key
         self.model = model
+        self.base_url = (base_url or "https://api.openai.com/v1").rstrip("/")
         self.fallback = FallbackAIProvider()
 
     def enrich_event(
@@ -314,7 +312,7 @@ class OpenAIProvider(AIProvider):
             }
 
             with httpx.Client(timeout=15.0) as client:
-                res = client.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+                res = client.post(f"{self.base_url}/chat/completions", headers=headers, json=payload)
                 if res.status_code == 200:
                     data = res.json()
                     content_str = data["choices"][0]["message"]["content"]
@@ -356,7 +354,7 @@ class OpenAIProvider(AIProvider):
                 "temperature": temperature,
             }
             with httpx.Client(timeout=15.0) as client:
-                res = client.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+                res = client.post(f"{self.base_url}/chat/completions", headers=headers, json=payload)
                 if res.status_code == 200:
                     return res.json()["choices"][0]["message"]["content"]
         except Exception as e:
@@ -365,7 +363,7 @@ class OpenAIProvider(AIProvider):
 
 
 class OllamaProvider(AIProvider):
-    def __init__(self, base_url: str, model: str, timeout: int = 120):
+    def __init__(self, base_url: str, model: str, timeout: int = 180):
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.timeout = timeout
@@ -377,42 +375,118 @@ class OllamaProvider(AIProvider):
     def generate_embedding(self, text: str) -> List[float]:
         return self.fallback.generate_embedding(text)
 
+    def is_thinking_model(self) -> bool:
+        """Check if model uses extended reasoning/thinking tokens (e.g. qwen3, deepseek-r1)."""
+        return any(k in self.model.lower() for k in ["qwen3", "r1", "deepseek-r1"])
+
     def generate_chat(self, messages: List[Dict[str, str]], temperature: float = 0.2) -> Optional[str]:
+        import time
+        t0 = time.time()
+        logger.info("Calling Ollama chat: base_url=%s, model=%s, timeout=%ds", self.base_url, self.model, self.timeout)
+
+        # Optimize for thinking models (e.g., qwen3, deepseek-r1)
+        # Suppress long hidden reasoning tokens to ensure fast, responsive answers
+        is_thinking = self.is_thinking_model()
+        chat_messages = list(messages)
+        if is_thinking and chat_messages and chat_messages[-1].get("role") == "user":
+            chat_messages.append({"role": "assistant", "content": "<think>\n</think>"})
+
         try:
             payload = {
                 "model": self.model,
-                "messages": messages,
+                "messages": chat_messages,
                 "stream": False,
                 "options": {
-                    "temperature": temperature
+                    "temperature": temperature,
+                    "num_predict": 350
                 }
             }
             with httpx.Client(timeout=self.timeout) as client:
                 res = client.post(f"{self.base_url}/api/chat", json=payload)
+                elapsed = time.time() - t0
                 if res.status_code == 200:
                     data = res.json()
-                    content = data.get("message", {}).get("content")
-                    # Remove thinking blocks if any exist (e.g. <think>...</think>)
+                    content = data.get("message", {}).get("content", "")
                     if content:
                         import re
                         content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
+                    logger.info("Ollama API responded in %.2fs (model=%s, chars=%d)", elapsed, self.model, len(content or ""))
                     return content
                 else:
-                    logger.warning(f"Ollama API returned status {res.status_code}")
+                    logger.warning("Ollama API returned HTTP %d in %.2fs: %s", res.status_code, elapsed, res.text[:200])
+                    raise RuntimeError(f"Ollama returned HTTP {res.status_code}")
+        except httpx.TimeoutException as exc:
+            elapsed = time.time() - t0
+            logger.error("Ollama API request timed out after %.2fs for model %s", elapsed, self.model)
+            raise TimeoutError(f"Ollama model '{self.model}' timed out after {self.timeout}s.") from exc
         except Exception as e:
-            logger.error(f"Error calling Ollama API: {e}")
+            logger.error("Error calling Ollama API (%s): %s", self.base_url, e)
+            raise
+
+
+
+class GeminiProvider(AIProvider):
+    def __init__(self, api_key: str, model: str = "gemini-1.5-flash"):
+        self.api_key = api_key
+        self.model = model if ("gemini" in model.lower()) else "gemini-1.5-flash"
+        self.fallback = FallbackAIProvider()
+
+    def enrich_event(
+        self,
+        title: str,
+        content: str,
+        domain: str,
+        reliability_score: float = 1.0
+    ) -> Dict[str, Any]:
+        return self.fallback.enrich_event(title, content, domain, reliability_score)
+
+    def generate_embedding(self, text: str) -> List[float]:
+        return self.fallback.generate_embedding(text)
+
+    def generate_chat(self, messages: List[Dict[str, str]], temperature: float = 0.2) -> Optional[str]:
+        if not self.api_key:
+            return None
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+            }
+            payload = {
+                "model": self.model,
+                "messages": messages,
+                "temperature": temperature,
+            }
+            with httpx.Client(timeout=25.0) as client:
+                res = client.post(
+                    "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+                    headers=headers,
+                    json=payload
+                )
+                if res.status_code == 200:
+                    data = res.json()
+                    return data["choices"][0]["message"]["content"]
+                logger.warning(f"Gemini API returned HTTP {res.status_code}: {res.text[:200]}")
+        except Exception as e:
+            logger.error(f"Error calling Gemini Chat API: {e}")
         return None
 
 def get_ai_provider() -> AIProvider:
     provider_type = getattr(settings, "AI_PROVIDER", "fallback").lower()
-    api_key = getattr(settings, "AI_API_KEY", "")
+    api_key = (
+        getattr(settings, "AI_API_KEY", "")
+        or getattr(settings, "OPENAI_API_KEY", "")
+        or getattr(settings, "GEMINI_API_KEY", "")
+    )
+    base_url = getattr(settings, "AI_BASE_URL", "")
     model = getattr(settings, "AI_MODEL", "gpt-4o-mini")
 
-    if provider_type == "openai" and api_key:
-        return OpenAIProvider(api_key=api_key, model=model)
+    if provider_type in ("gemini", "google") and api_key:
+        return GeminiProvider(api_key=api_key, model=model)
+    elif provider_type == "openai" and api_key:
+        return OpenAIProvider(api_key=api_key, model=model, base_url=base_url or None)
     elif provider_type == "ollama":
-        base_url = getattr(settings, "OLLAMA_BASE_URL", "http://host.docker.internal:11434")
-        timeout = getattr(settings, "OLLAMA_TIMEOUT", 120)
-        return OllamaProvider(base_url=base_url, model=model, timeout=timeout)
+        ollama_url = getattr(settings, "OLLAMA_BASE_URL", "http://host.docker.internal:11434")
+        timeout = getattr(settings, "OLLAMA_TIMEOUT", 180)
+        return OllamaProvider(base_url=ollama_url, model=model, timeout=timeout)
 
     return FallbackAIProvider()

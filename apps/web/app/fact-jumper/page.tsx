@@ -40,10 +40,10 @@ export default function FactJumperPage() {
         <div className="editorial-card p-5 space-y-2">
           <div className="flex items-center gap-2 text-amber-500">
             <Sparkles className="w-4 h-4" />
-            <h3 className="font-bold text-sm">Milestone Exam Facts</h3>
+            <h3 className="font-bold text-sm">Gradual Speed Curve</h3>
           </div>
           <p className="body-copy text-xs leading-relaxed">
-            Every 100 points unlocked presents a high-yield competitive exam fact across Indian Polity, History, Science & Technology, and Tamil Nadu heritage.
+            Calibrated Chrome T-Rex physics pace obstacles progressively as your score climbs, keeping reflexes sharp without sudden difficulty spikes.
           </p>
         </div>
 

@@ -28,8 +28,9 @@ class PYQPaper(Base):
     redistribution_status = Column(String(50), nullable=False, default="unknown")
     file_size_bytes = Column(BigInteger, nullable=True)
     mime_type = Column(String(50), nullable=False, default="application/pdf")
-    availability_status = Column(String(30), nullable=False, default="source_link_only")  # available, source_link_only, restricted
+    availability_status = Column(String(30), nullable=False, default="source_link_only")  # available, external_pdf, source_link_only, unavailable, restricted
     download_count = Column(Integer, nullable=False, default=0)
+    last_verified_at = Column(DateTime(timezone=True), nullable=True)
 
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(

@@ -24,6 +24,7 @@ class PYQPaperBase(BaseModel):
     mime_type: str = "application/pdf"
     availability_status: str = "source_link_only"
     download_count: int = 0
+    last_verified_at: Optional[datetime] = None
 
 
 class PYQPaperCreate(PYQPaperBase):
@@ -32,17 +33,20 @@ class PYQPaperCreate(PYQPaperBase):
 
 class PYQPaperUpdate(BaseModel):
     title: Optional[str] = None
+    source_url: Optional[str] = None
     pdf_url: Optional[str] = None
     storage_path: Optional[str] = None
     availability_status: Optional[str] = None
     verification_status: Optional[str] = None
     download_count: Optional[int] = None
+    last_verified_at: Optional[datetime] = None
 
 
 class PYQPaperResponse(PYQPaperBase):
     created_at: datetime
     updated_at: datetime
     has_local_file: bool = False
+    source_status: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -60,3 +64,4 @@ class PYQPaperFilterOptions(BaseModel):
     years: List[int]
     subjects: List[str]
     languages: List[str]
+    availability_statuses: List[str] = ["available", "source_link_only"]

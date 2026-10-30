@@ -17,18 +17,21 @@ function QuizRenderer({ content }: { content: string }) {
   const questions = parts.slice(1);
 
   return (
-    <div className="space-y-6 text-[15px] leading-relaxed text-[var(--text-primary)] w-full">
-      <h3 className="text-xl font-semibold text-[var(--brand-primary)] border-b border-[var(--brand-primary-border)] pb-3 mb-6 uppercase tracking-wider text-sm">
-        Current Affairs Practice Quiz
-      </h3>
+    <div className="space-y-6 text-sm leading-relaxed text-[var(--text-primary)] w-full">
+      <div className="border-b border-[var(--border)] pb-2.5 mb-4 flex items-center justify-between">
+        <span className="badge-editorial text-xs font-semibold text-[var(--accent)] border-[var(--accent)]">
+          PRACTICE COMPREHENSION DRILL
+        </span>
+        <span className="text-xs text-[var(--text-muted)] font-mono">{questions.length} Questions</span>
+      </div>
 
-      <div className="space-y-6">
+      <div className="space-y-5">
         {questions.map((q, idx) => {
           const lines = q.split('\n').map(l => l.trim()).filter(Boolean);
           const firstLine = lines[0];
           const questionText = firstLine.replace(/\*\*$/, '').trim();
 
-          const options = [];
+          const options: string[] = [];
           let correctAnswer = '';
           let explanation = '';
 
@@ -46,32 +49,39 @@ function QuizRenderer({ content }: { content: string }) {
           }
 
           return (
-            <div key={idx} className="bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-xl p-5 md:p-6 shadow-sm">
-              <h4 className="font-semibold text-[var(--text-primary)] mb-4 text-base">
-                Question {questionText}
+            <div key={idx} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 shadow-xs space-y-4">
+              <h4 className="font-bold text-[var(--text-primary)] text-sm md:text-base leading-snug">
+                <span className="text-[var(--accent)] font-mono mr-2">Q{idx + 1}.</span>
+                {questionText.replace(/^\d+[\.\)]\s*/, '')}
               </h4>
-              <div className="space-y-3 mb-5">
-                {options.map((opt, oIdx) => (
-                  <div key={oIdx} className="flex items-start gap-3">
-                    <div className="w-5 h-5 rounded-full border border-[var(--surface-border)] flex-shrink-0 mt-0.5 flex items-center justify-center bg-[var(--background-primary)]">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {options.map((opt, oIdx) => {
+                  const letter = String.fromCharCode(65 + oIdx);
+                  const cleanText = opt.replace(/^[A-D]\)\s*/, '');
+                  return (
+                    <div key={oIdx} className="p-3 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] flex items-start gap-2.5 text-xs">
+                      <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold bg-[var(--surface)] border border-[var(--border)] shrink-0 text-[var(--text-secondary)]">
+                        {letter}
+                      </span>
+                      <span className="text-[var(--text-primary)] leading-snug pt-0.5">{cleanText}</span>
                     </div>
-                    <span className="text-[var(--text-secondary)]">{opt}</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {(correctAnswer || explanation) && (
-                <div className="mt-4 pt-4 border-t border-[var(--surface-border)]">
+                <div className="mt-3 pt-3 border-t border-[var(--border)] space-y-2">
                   {correctAnswer && (
-                    <div className="mb-2">
-                      <span className="font-semibold text-[var(--brand-primary)] uppercase text-xs tracking-wider">Answer: </span>
-                      <span className="font-medium text-[var(--text-primary)]">{correctAnswer}</span>
+                    <div className="text-xs">
+                      <span className="font-semibold text-[var(--success)] uppercase tracking-wider text-[11px]">Correct Answer: </span>
+                      <span className="font-bold text-[var(--text-primary)]">{correctAnswer}</span>
                     </div>
                   )}
                   {explanation && (
-                    <div>
-                      <span className="font-semibold text-[var(--brand-primary)] uppercase text-xs tracking-wider block mb-1">Explanation</span>
-                      <p className="text-[var(--text-secondary)] text-sm">{explanation}</p>
+                    <div className="p-3 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] text-xs text-[var(--text-secondary)] leading-relaxed">
+                      <span className="font-semibold text-[var(--accent)] block mb-1">Academic Rationale</span>
+                      <p>{explanation}</p>
                     </div>
                   )}
                 </div>
@@ -104,24 +114,37 @@ function EventRenderer({ content }: { content: string }) {
 
   if (eventBlocks.length === 0) {
     return (
-      <div className="space-y-4 text-[15px] leading-relaxed text-[var(--text-primary)]">
+      <div className="space-y-3 text-sm leading-relaxed text-[var(--text-primary)]">
         {content.split('\n\n').map((para, i) => {
-          if (para.startsWith('###')) return <h3 key={i} className="text-xl font-semibold text-[var(--brand-primary)] uppercase tracking-wider text-sm mb-2">{para.replace(/### /, '')}</h3>;
-          return <p key={i} className="whitespace-pre-wrap">{para}</p>;
+          if (para.startsWith('###')) {
+            return (
+              <h3 key={i} className="text-base font-bold text-[var(--accent)] uppercase tracking-wider mb-2">
+                {para.replace(/### /, '')}
+              </h3>
+            );
+          }
+          return <p key={i} className="whitespace-pre-wrap leading-relaxed">{para}</p>;
         })}
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 text-[15px] leading-relaxed text-[var(--text-primary)] w-full">
+    <div className="space-y-5 text-sm leading-relaxed text-[var(--text-primary)] w-full">
       {title && (
-        <h3 className="text-xl font-semibold text-[var(--text-primary)] border-b border-[var(--surface-border)] pb-3 mb-6 uppercase tracking-wider text-sm">
-          {title.replace(/\(.*\)/, '').trim()}
-        </h3>
+        <div className="border-b border-[var(--border)] pb-2.5 mb-3 flex items-center justify-between">
+          <h3 className="headline text-base font-bold text-[var(--text-primary)] tracking-tight">
+            {title.replace(/\(.*\)/, '').trim()}
+          </h3>
+          {priorityLabel && (
+            <span className="badge-editorial text-[10px] text-[var(--danger)] border-[var(--danger)] font-semibold">
+              {priorityLabel}
+            </span>
+          )}
+        </div>
       )}
 
-      <div className="space-y-6">
+      <div className="space-y-4">
         {eventBlocks.map((block, idx) => {
           const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
           const headline = lines[0].replace(/^\*\*\d+\.\s*/, '').replace(/\*\*$/, '');
@@ -158,55 +181,49 @@ function EventRenderer({ content }: { content: string }) {
           }
 
           return (
-            <div key={idx} className="bg-[var(--surface-muted)] border border-[var(--surface-border)] rounded-xl overflow-hidden shadow-sm">
-
-              {priorityLabel && idx === 0 && (
-                <div className="bg-[var(--brand-primary-soft)] border-b border-[var(--brand-primary-border)] px-5 py-2.5 flex items-center gap-2">
-                   <span className="w-2 h-2 rounded-full bg-[var(--brand-primary)] animate-pulse"></span>
-                   <span className="text-[10px] font-bold text-[var(--brand-primary)] tracking-widest uppercase">{priorityLabel}</span>
-                </div>
-              )}
-
-              <div className="p-5 md:p-6 space-y-5">
-                <h4 className="font-semibold text-lg text-[var(--text-primary)] leading-snug">
+            <div key={idx} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-hidden shadow-xs">
+              <div className="p-5 space-y-4">
+                <h4 className="headline font-bold text-base text-[var(--text-primary)] leading-snug">
                   {headline}
                 </h4>
 
                 {whatHappened && (
                   <div>
-                    <h5 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-1.5">What Happened</h5>
-                    <p className="text-[var(--text-secondary)] text-[15px]">{whatHappened}</p>
+                    <h5 className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1">
+                      Event Summary
+                    </h5>
+                    <p className="text-[var(--text-secondary)] text-xs md:text-sm leading-relaxed">{whatHappened}</p>
                   </div>
                 )}
 
                 {whyItMatters && (
                   <div>
-                    <h5 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-1.5">Why It Matters</h5>
-                    <p className="text-[var(--text-secondary)] text-[15px]">{whyItMatters}</p>
+                    <h5 className="text-[10px] font-semibold text-[var(--accent)] uppercase tracking-wider mb-1">
+                      Exam Relevance & Why It Matters
+                    </h5>
+                    <p className="text-[var(--text-secondary)] text-xs md:text-sm leading-relaxed">{whyItMatters}</p>
                   </div>
                 )}
               </div>
 
               {(examFact || relevantExams || source) && (
-                <div className="bg-[var(--background-secondary)] border-t border-[var(--surface-border)] px-5 py-3.5 flex flex-col md:flex-row md:items-center gap-3 justify-between">
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[var(--text-secondary)] font-medium text-[13px]">
+                <div className="bg-[var(--surface-muted)] border-t border-[var(--border)] px-5 py-3 flex flex-wrap items-center gap-3 justify-between text-xs text-[var(--text-secondary)]">
+                  <div className="flex flex-wrap items-center gap-2">
                     {examFact && (
-                      <span className="flex items-center gap-1.5 bg-[var(--surface-muted)] px-2.5 py-1 rounded-md border border-[var(--surface-border)]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand-primary)]"></span>
+                      <span className="badge-editorial text-[10px] text-[var(--text-primary)] border-[var(--border)] bg-[var(--surface)] font-medium">
                         {examFact.replace('Domain: ', '').replace(' | Category: ', ' · ')}
                       </span>
                     )}
                     {relevantExams && (
-                      <span className="flex items-center gap-1.5">
-                         {relevantExams}
+                      <span className="badge-editorial text-[10px] text-[var(--accent)] border-[var(--accent)]">
+                        {relevantExams}
                       </span>
                     )}
                   </div>
                   {source && (
-                    <div className="flex items-center gap-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer text-[13px] font-medium bg-[var(--surface-hover)] px-2.5 py-1 rounded-md border border-[var(--surface-border)]">
-                      <span>📰 {source}</span>
-                      <span className="text-[10px] opacity-70">↗</span>
-                    </div>
+                    <span className="text-[11px] text-[var(--text-muted)] font-mono">
+                      📰 {source}
+                    </span>
                   )}
                 </div>
               )}

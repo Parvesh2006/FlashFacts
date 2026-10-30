@@ -2,11 +2,12 @@ import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text, inspect
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.logging import setup_logging, logger
-from app.core.database import engine, Base, SessionLocal
+from app.core.database import engine, Base, SessionLocal, verify_database_head
 from app.api.router import api_router
 from app.models.source import Source
 from app.services.scheduler import ingestion_scheduler
@@ -104,17 +105,43 @@ def seed_default_sources(db: Session = None):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     setup_logging()
-    logger.info("Starting FlashFacts API Server...")
-    try:
-        Base.metadata.create_all(bind=engine)
-        seed_default_sources()
-    except Exception as e:
-        logger.warning(f"Database initialization during lifespan skipped or failed: {e}")
+    logger.info("Starting FlashFacts API Server... (env=%s)", settings.APP_ENV)
+
+    is_prod_or_staging = settings.APP_ENV in ("production", "prod", "staging")
+
+    if is_prod_or_staging:
+        # In production and staging, schema must be initialized via 'alembic upgrade head'.
+        # Base.metadata.create_all() is strictly bypassed to guarantee migration integrity.
+        # Verify that the database is at the actual Alembic HEAD revision.
+        logger.info("Verifying production/staging database readiness and migration status...")
+        try:
+            current_rev = verify_database_head(engine)
+            logger.info("Database migration check passed: revision '%s' matches expected HEAD.", current_rev)
+            seed_default_sources()
+        except Exception as e:
+            logger.critical("Database readiness check failed in %s: %s", settings.APP_ENV, e)
+            raise e
+    elif settings.APP_ENV != "testing":
+        # In local development, create_all maintains rapid onboarding
+        try:
+            Base.metadata.create_all(bind=engine)
+            seed_default_sources()
+        except Exception as e:
+            logger.warning(f"Database initialization during lifespan skipped or failed: {e}")
+
     scheduler_task = None
     stop_event = asyncio.Event()
     if settings.INGESTION_ENABLED and settings.APP_ENV != "testing":
+        logger.info("Ingestion scheduler is enabled. Starting background ingestion loop...")
         scheduler_task = asyncio.create_task(ingestion_scheduler(stop_event))
+    else:
+        logger.info(
+            "Ingestion scheduler is disabled on this instance (INGESTION_ENABLED=%s).",
+            settings.INGESTION_ENABLED
+        )
+
     yield
+
     if scheduler_task:
         stop_event.set()
         await scheduler_task
@@ -131,7 +158,7 @@ app = FastAPI(
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS if isinstance(settings.CORS_ORIGINS, list) else ["*"],
+    allow_origins=settings.CORS_ORIGINS if isinstance(settings.CORS_ORIGINS, list) else ["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

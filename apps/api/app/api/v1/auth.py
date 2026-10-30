@@ -106,86 +106,74 @@ def merge_guest_data(db: Session, guest_id: str, target_user: User) -> Dict[str,
 
 
 def verify_google_credential(credential: str) -> Dict[str, Any]:
-    """
-    Verifies a Google ID credential token.
-    Supports mock/test credentials, Google tokeninfo endpoint, and JWT payload decoding.
-    """
-    if not credential:
+    """Verify a Google ID token through Google's tokeninfo endpoint."""
+    if not credential or not credential.strip():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Google credential token is required",
         )
 
-    # 1. Handle mock/test credentials (e.g. mock_google_user@example.com or test_google_...)
-    if credential.startswith("mock_google_") or credential.startswith("test_google_"):
-        prefix = "mock_google_" if credential.startswith("mock_google_") else "test_google_"
-        email_part = credential[len(prefix):]
-        email = email_part if "@" in email_part else f"{email_part}@gmail.com"
-        username_hint = email.split("@")[0]
-        return {
-            "email": email,
-            "name": username_hint.replace(".", " ").replace("_", " ").title(),
-            "sub": f"mock_google_sub_{username_hint}",
-        }
+    client_id = settings.GOOGLE_CLIENT_ID.strip()
+    if not client_id:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Google sign-in is not configured on the server",
+        )
 
-    # 2. Try online Google Tokeninfo verification if network is available
+    import httpx
+
     try:
-        import httpx
-        with httpx.Client(timeout=4.0) as http_client:
-            resp = http_client.get(
-                "https://oauth2.googleapis.com/tokeninfo",
-                params={"id_token": credential},
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-                if settings.GOOGLE_CLIENT_ID and data.get("aud") != settings.GOOGLE_CLIENT_ID:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="Google token client ID mismatch",
-                    )
-                email = data.get("email")
-                if not email:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="Google credential did not provide an email address",
-                    )
-                return {
-                    "email": email,
-                    "name": data.get("name") or email.split("@")[0],
-                    "sub": data.get("sub", ""),
-                }
-    except HTTPException:
-        raise
-    except Exception:
-        # Pass to offline / JWT payload extraction
-        pass
+        response = httpx.get(
+            "https://oauth2.googleapis.com/tokeninfo",
+            params={"id_token": credential},
+            timeout=8.0,
+        )
+    except httpx.HTTPError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Google verification service is temporarily unavailable",
+        )
 
-    # 3. Development / JWT token inspection fallback
+    if response.status_code != 200:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired Google credential",
+        )
+
     try:
-        parts = credential.split(".")
-        if len(parts) == 3:
-            payload = json.loads(base64url_decode(parts[1]).decode("utf-8"))
-            email = payload.get("email")
-            if email:
-                if settings.GOOGLE_CLIENT_ID and payload.get("aud") != settings.GOOGLE_CLIENT_ID:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="Google token client ID mismatch",
-                    )
-                return {
-                    "email": email,
-                    "name": payload.get("name") or email.split("@")[0],
-                    "sub": payload.get("sub", ""),
-                }
-    except HTTPException:
-        raise
-    except Exception:
-        pass
+        data = response.json()
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Google verification response",
+        )
 
-    raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        detail="Invalid or unverified Google credential token",
-    )
+    if data.get("aud") != client_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Google token client ID mismatch",
+        )
+
+    email = data.get("email")
+    subject = data.get("sub")
+
+    if (
+        not isinstance(email, str)
+        or not email.strip()
+        or data.get("email_verified") not in (True, "true")
+        or not isinstance(subject, str)
+        or not subject.strip()
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Google account email is not verified or required claims are missing",
+        )
+
+    return {
+        "email": email.strip().lower(),
+        "name": data.get("name") or email.split("@")[0],
+        "sub": subject,
+    }
 
 
 @router.post("/guest", response_model=TokenResponse)

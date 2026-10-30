@@ -36,8 +36,13 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/flashfacts
       REDIS_URL: redis://redis:6379/0
-      APP_ENV: production
-      CORS_ORIGINS: '["*"]'
+      AI_PROVIDER: ${AI_PROVIDER:-gemini}
+      AI_MODEL: ${AI_MODEL:-gemini-2.5-flash}
+      AI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      APP_ENV: ${APP_ENV:-development}
+      SECRET_KEY: ${SECRET_KEY:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-'["http://localhost:3000","http://localhost:8000"]'}
       INGESTION_ENABLED: "true"
       INGESTION_INTERVAL_MINUTES: "30"
       INGESTION_FRESHNESS_HOURS: "72"

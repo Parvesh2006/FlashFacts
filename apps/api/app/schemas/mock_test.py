@@ -8,7 +8,7 @@ class MockTestCreate(BaseModel):
     domain: Optional[str] = None
     language: str = "en"
     difficulty: str = "medium"
-    total_questions: int = Field(10, ge=1, le=150)
+    total_questions: int = Field(10, ge=1, le=200)
     time_limit_minutes: int = Field(30, ge=5, le=180)
     negative_marking: Optional[float] = None
     include_pyqs: bool = True
@@ -28,7 +28,10 @@ class MockTestQuestionSchema(BaseModel):
 class MockTestSummary(BaseModel):
     id: str
     exam_name: str
+    title: Optional[str] = None
     domain: Optional[str] = None
+    subject: Optional[str] = None
+    template_key: Optional[str] = None
     language: str
     difficulty: str
     total_questions: int
@@ -45,6 +48,7 @@ class MockTestSummary(BaseModel):
 class MockTestResponse(BaseModel):
     id: str
     exam_name: str
+    title: Optional[str] = None
     domain: Optional[str] = None
     language: str
     difficulty: str

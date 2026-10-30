@@ -364,10 +364,11 @@ export default function ExamsPage() {
                             onClick={() => selectAnswer(qIdx, letter)}
                             className={optClass}
                           >
-                            <div className="flex items-center gap-2">
-                              {isRevealed && isCorrect && <CheckCircle2 className="w-4 h-4 text-[var(--success)] shrink-0" />}
-                              {isRevealed && isSelected && !isCorrect && <XCircle className="w-4 h-4 text-[var(--danger)] shrink-0" />}
-                              <span>{opt}</span>
+                            <div className="flex items-start gap-2.5">
+                              <span className="font-bold opacity-80">{letter}.</span>
+                              <span className="flex-1 leading-snug">{opt.replace(/^[A-D][.)]\s*/i, "").trim()}</span>
+                              {isRevealed && isCorrect && <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 ml-auto" />}
+                              {isRevealed && isSelected && !isCorrect && <XCircle className="w-4 h-4 text-rose-500 shrink-0 ml-auto" />}
                             </div>
                           </button>
                         );

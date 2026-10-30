@@ -3,7 +3,10 @@ import { api } from "@/lib/api";
 export interface MockTestSummary {
   id: string;
   exam_name: string;
+  title?: string;
   domain?: string;
+  subject?: string;
+  template_key?: string;
   language: string;
   difficulty: string;
   total_questions: number;
@@ -27,6 +30,7 @@ export interface MockTestQuestion {
 export interface MockTestDetails {
   id: string;
   exam_name: string;
+  title?: string;
   domain?: string;
   language: string;
   difficulty: string;
@@ -119,6 +123,16 @@ export async function fetchAttemptReview(
   attemptId: string
 ): Promise<MockTestAttemptResult> {
   return api.get<MockTestAttemptResult>(`/api/v1/mock-tests/${testId}/attempts/${attemptId}`);
+}
+
+export interface ExamBankStats {
+  available_questions: number;
+  supported_lengths: number[];
+  full_length: number;
+}
+
+export async function fetchEligibleCounts(): Promise<Record<string, ExamBankStats>> {
+  return api.get<Record<string, ExamBankStats>>("/api/v1/mock-tests/eligible-counts");
 }
 
 export async function fetchAttemptHistory(limit = 50, offset = 0): Promise<MockTestAttemptSummary[]> {

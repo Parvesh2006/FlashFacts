@@ -22,7 +22,7 @@ router = APIRouter()
 def list_revision_items(
     exam_name: Optional[str] = None,
     subject: Optional[str] = None,
-    status: Optional[str] = Query("all", regex="^(all|pending|revised)$"),
+    status: Optional[str] = Query("all", pattern="^(all|pending|revised)$"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     user: User = Depends(get_current_user),

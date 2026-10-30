@@ -53,36 +53,84 @@ def resolve_safe_pdf_path(storage_path: Optional[str]) -> Optional[Path]:
     Validates that a local PDF file path does not escape storage directory (Path Traversal Protection)
     and actually exists as a valid regular file.
     """
-    if not storage_path:
+    if not storage_path or "\x00" in storage_path:
         return None
-    base_dir = get_base_storage_dir()
-    p = Path(storage_path)
+    try:
+        base_dir = get_base_storage_dir().resolve()
+        p = Path(storage_path)
 
-    # Protect against path traversal and resolve candidate
-    candidates = []
-    if p.is_absolute():
-        candidates.append(p.resolve())
-    else:
-        candidates.append((base_dir / p.name).resolve())
-        candidates.append((base_dir.parent / p).resolve())
-        candidates.append((base_dir / p).resolve())
+        # Disallow parent path traversal components
+        if any(part == ".." for part in p.parts):
+            return None
 
-    for c in candidates:
-        try:
-            # Check path containment within approved storage
-            if c.is_file() and (base_dir in c.parents or c.parent == base_dir):
-                return c
-        except Exception:
-            continue
+        if p.is_absolute():
+            resolved = p.resolve()
+        else:
+            if p.name == storage_path or str(p) in (f"data/pyq_pdfs/{p.name}", f"pyq_pdfs/{p.name}"):
+                resolved = (base_dir / p.name).resolve()
+            else:
+                resolved = (base_dir / p).resolve()
+
+        if resolved.is_file() and (base_dir in resolved.parents or resolved.parent == base_dir):
+            return resolved
+    except Exception:
+        return None
     return None
 
 
 def verify_pdf_magic_bytes(file_path: Path) -> bool:
-    """Verifies that the document begins with the standard %PDF- magic signature."""
+    """Verifies that the document begins with the standard %PDF- magic signature and is not HTML."""
     try:
         with open(file_path, "rb") as f:
-            header = f.read(5)
-            return header == b"%PDF-"
+            header = f.read(1024)
+            if not header.startswith(b"%PDF-"):
+                return False
+            lower = header.lower()
+            if b"<!doctype html" in lower or b"<html" in lower or b"<?xml" in lower:
+                return False
+            return True
+    except Exception:
+        return False
+
+
+def verify_pdf_structure(file_path: Path) -> bool:
+    """
+    Validates that a file:
+    1. Begins with the standard %PDF- magic signature.
+    2. Does not start with HTML or XML error pages.
+    3. Has valid structural markers (trailer, %%EOF, or parses with pypdf).
+    4. Has a valid size (>=10 bytes and <= 50MB).
+    """
+    if not file_path.is_file():
+        return False
+    try:
+        size = file_path.stat().st_size
+        if size < 10 or size > 50 * 1024 * 1024:
+            return False
+
+        if not verify_pdf_magic_bytes(file_path):
+            return False
+
+        # Attempt pypdf structural parse if library is installed
+        try:
+            import pypdf
+            reader = pypdf.PdfReader(str(file_path))
+            if len(reader.pages) >= 1:
+                return True
+        except ImportError:
+            pass
+        except Exception:
+            # Fall back to structural byte markers if minimal test stub lacks full /Pages tree
+            pass
+
+        # Fallback structural checks: check for %%EOF marker within the file
+        with open(file_path, "rb") as f:
+            content = f.read()
+            if b"%%EOF" not in content[-1024:]:
+                return False
+            if b"/Catalog" not in content and b"/Pages" not in content and b"trailer" not in content:
+                return False
+            return True
     except Exception:
         return False
 
@@ -105,6 +153,7 @@ def list_pyq_papers(
     year: Optional[int] = Query(None, description="Filter by examination year"),
     subject: Optional[str] = Query(None, description="Filter by subject or paper title"),
     language: Optional[str] = Query(None, description="Filter by paper language"),
+    availability: Optional[str] = Query(None, description="Filter by PDF availability: available (local PDF), source_link_only (external link)"),
     q: Optional[str] = Query(None, description="Keyword search across paper title, exam name, subject, or code"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
@@ -118,6 +167,7 @@ def list_pyq_papers(
         year=year,
         subject=subject,
         language=language,
+        availability=availability,
         search_query=q,
         limit=limit,
         offset=offset,
@@ -126,6 +176,12 @@ def list_pyq_papers(
     items = []
     for p in papers:
         local_file = resolve_safe_pdf_path(p.storage_path)
+        is_valid_local = bool(
+            p.verification_status == "verified_official"
+            and p.availability_status == "available"
+            and local_file is not None
+            and verify_pdf_structure(local_file)
+        )
         items.append(
             PYQPaperResponse(
                 id=p.id,
@@ -148,9 +204,11 @@ def list_pyq_papers(
                 mime_type=p.mime_type,
                 availability_status=p.availability_status,
                 download_count=p.download_count,
+                last_verified_at=p.last_verified_at,
+                source_status=compute_source_status(p, is_valid_local),
                 created_at=p.created_at,
                 updated_at=p.updated_at,
-                has_local_file=(p.verification_status == "verified_official" and local_file is not None),
+                has_local_file=is_valid_local,
             )
         )
 
@@ -171,6 +229,12 @@ def get_pyq_paper(paper_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Question paper not found")
 
     local_file = resolve_safe_pdf_path(paper.storage_path)
+    is_valid_local = bool(
+        paper.verification_status == "verified_official"
+        and paper.availability_status == "available"
+        and local_file is not None
+        and verify_pdf_structure(local_file)
+    )
     return PYQPaperResponse(
         id=paper.id,
         exam_name=paper.exam_name,
@@ -192,9 +256,11 @@ def get_pyq_paper(paper_id: str, db: Session = Depends(get_db)):
         mime_type=paper.mime_type,
         availability_status=paper.availability_status,
         download_count=paper.download_count,
+        last_verified_at=paper.last_verified_at,
+        source_status=compute_source_status(paper, is_valid_local),
         created_at=paper.created_at,
         updated_at=paper.updated_at,
-        has_local_file=(paper.verification_status == "verified_official" and local_file is not None),
+        has_local_file=is_valid_local,
     )
 
 
@@ -202,14 +268,42 @@ def get_pyq_paper(paper_id: str, db: Session = Depends(get_db)):
 _AUTHORITY_HOSTS = {
     "TNPSC": {"tnpsc.gov.in", "www.tnpsc.gov.in"},
     "UPSC": {"upsc.gov.in", "www.upsc.gov.in"},
-    "SSC": {"ssc.gov.in", "www.ssc.gov.in"},
-    "RRB": {"rrbcdg.gov.in", "www.rrbcdg.gov.in"},
+    "SSC": {"ssc.gov.in", "www.ssc.gov.in", "ssc.nic.in", "www.ssc.nic.in"},
+    "RRB": {
+        "rrbcdg.gov.in",
+        "www.rrbcdg.gov.in",
+        "rrb.indianrailways.gov.in",
+        "indianrailways.gov.in",
+        "www.indianrailways.gov.in",
+    },
 }
 
 
-def _safe_authority_source_url(paper) -> Optional[str]:
+def compute_source_status(paper, has_local_file: bool) -> str:
+    """
+    Computes an honest status label for the resource:
+    - 'verified_local': Genuine official local PDF file verified on disk.
+    - 'verified_external_pdf': Direct official PDF hosted on commission portal.
+    - 'archive_link': Official commission portal archive / tentative key link.
+    - 'temporarily_unavailable': Resource failed verification or portal is temporarily offline.
+    - 'unverified': Source not yet verified.
+    """
+    if getattr(paper, "verification_status", None) != "verified_official":
+        return "unverified"
+    if paper.availability_status == "available" and has_local_file:
+        return "verified_local"
+    if paper.availability_status == "external_pdf" and paper.pdf_url:
+        return "verified_external_pdf"
+    if paper.availability_status == "source_link_only":
+        return "archive_link"
+    if paper.availability_status == "unavailable":
+        return "temporarily_unavailable"
+    return "unverified"
+
+
+def _safe_authority_source_url(paper, target_url: Optional[str] = None) -> Optional[str]:
     """Return an HTTPS source URL only when its authority host is approved."""
-    source = (paper.source_url or "").strip()
+    source = (target_url or paper.source_url or "").strip()
     try:
         parsed = urlsplit(source)
         hostname = (parsed.hostname or "").lower()
@@ -249,7 +343,11 @@ def _require_source_page(paper):
 
 
 @router.get("/papers/{paper_id}/pdf")
-def view_pyq_paper_pdf(paper_id: str, db: Session = Depends(get_db)):
+def view_pyq_paper_pdf(
+    paper_id: str,
+    user: Optional[User] = Depends(get_current_user_optional),
+    db: Session = Depends(get_db),
+):
     repo = PYQPaperRepository(db)
     paper = repo.get(paper_id)
     if not paper:
@@ -259,23 +357,55 @@ def view_pyq_paper_pdf(paper_id: str, db: Session = Depends(get_db)):
     if redirect:
         return redirect
 
+    if paper.availability_status == "unavailable":
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="The official examination document is temporarily unavailable from the commission portal.",
+        )
+
+    if paper.availability_status == "external_pdf":
+        target = _safe_authority_source_url(paper, paper.pdf_url)
+        if target:
+            return RedirectResponse(url=target, status_code=307)
+        fallback = _safe_authority_source_url(paper, paper.source_url)
+        if fallback:
+            return RedirectResponse(url=fallback, status_code=307)
+        raise HTTPException(status_code=404, detail="External verified PDF URL is not approved or unavailable.")
+
+    if paper.availability_status == "source_link_only":
+        source = _safe_authority_source_url(paper, paper.source_url)
+        if source:
+            return RedirectResponse(url=source, status_code=307)
+        raise HTTPException(status_code=404, detail="Official archive source URL is not approved.")
+
     local_file = resolve_safe_pdf_path(paper.storage_path)
-    if local_file and verify_pdf_magic_bytes(local_file):
+    if local_file and verify_pdf_structure(local_file):
+        clean_title = re.sub(r"[^a-zA-Z0-9_-]+", "_", paper.title).strip("_")[:50]
+        safe_filename = f"{clean_title}_{paper.year}.pdf"
         return FileResponse(
             path=str(local_file),
             media_type="application/pdf",
-            filename=f"{paper.id}.pdf",
+            filename=safe_filename,
+            content_disposition_type="inline",
+            headers={
+                "Content-Disposition": f'inline; filename="{safe_filename}"',
+                "Accept-Ranges": "bytes",
+            },
         )
 
-    source = _safe_authority_source_url(paper)
+    source = _safe_authority_source_url(paper, paper.source_url)
     if source:
         return RedirectResponse(url=source, status_code=307)
 
-    raise HTTPException(status_code=404, detail="Verified PDF is unavailable.")
+    raise HTTPException(status_code=404, detail="Verified PDF is unavailable locally.")
 
 
 @router.get("/papers/{paper_id}/download")
-def download_pyq_paper_pdf(paper_id: str, db: Session = Depends(get_db)):
+def download_pyq_paper_pdf(
+    paper_id: str,
+    user: Optional[User] = Depends(get_current_user_optional),
+    db: Session = Depends(get_db),
+):
     repo = PYQPaperRepository(db)
     paper = repo.get(paper_id)
     if not paper:
@@ -285,8 +415,32 @@ def download_pyq_paper_pdf(paper_id: str, db: Session = Depends(get_db)):
     if redirect:
         return redirect
 
+    if paper.availability_status == "unavailable":
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="The official examination document is temporarily unavailable from the commission portal.",
+        )
+
+    if paper.availability_status == "external_pdf":
+        target = _safe_authority_source_url(paper, paper.pdf_url)
+        if target:
+            return RedirectResponse(url=target, status_code=307)
+        fallback = _safe_authority_source_url(paper, paper.source_url)
+        if fallback:
+            return RedirectResponse(url=fallback, status_code=307)
+        raise HTTPException(status_code=404, detail="External verified PDF URL is not approved.")
+
+    if paper.availability_status == "source_link_only":
+        source = _safe_authority_source_url(paper, paper.source_url)
+        if source:
+            return RedirectResponse(url=source, status_code=307)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document is accessible via official commission portal only.",
+        )
+
     if paper.redistribution_status != "official_open_access":
-        source = _safe_authority_source_url(paper)
+        source = _safe_authority_source_url(paper, paper.source_url)
         if source:
             return RedirectResponse(url=source, status_code=307)
         raise HTTPException(
@@ -295,8 +449,8 @@ def download_pyq_paper_pdf(paper_id: str, db: Session = Depends(get_db)):
         )
 
     local_file = resolve_safe_pdf_path(paper.storage_path)
-    if not local_file or not verify_pdf_magic_bytes(local_file):
-        source = _safe_authority_source_url(paper)
+    if not local_file or not verify_pdf_structure(local_file):
+        source = _safe_authority_source_url(paper, paper.source_url)
         if source:
             return RedirectResponse(url=source, status_code=307)
         raise HTTPException(status_code=404, detail="Verified PDF is unavailable.")
@@ -427,6 +581,8 @@ def get_pyqs(
     subject: Optional[str] = None,
     topic: Optional[str] = None,
     language: Optional[str] = None,
+    type: Optional[str] = Query(None, description="Filter by question type: verified_pyq, syllabus_practice, current_affairs"),
+    include_invalid: bool = Query(False, description="Whether to include invalid/pending review questions"),
     q: Optional[str] = None,
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
@@ -442,7 +598,9 @@ def get_pyqs(
         subject=subject,
         topic=topic,
         language=language,
+        question_type=type,
         search_query=q,
+        include_invalid=include_invalid,
         limit=limit,
         offset=offset,
         user_id=user_id,
@@ -479,6 +637,9 @@ def get_pyq(
         source=pyq.source,
         language=pyq.language or "en",
         is_verified=pyq.is_verified if pyq.is_verified is not None else True,
+        question_type=getattr(pyq, "question_type", "syllabus_practice") or "syllabus_practice",
+        quality_status=getattr(pyq, "quality_status", "valid") or "valid",
+        rejection_reason=getattr(pyq, "rejection_reason", None),
         question_text=pyq.question_text,
         options=pyq.options,
         correct_answer=pyq.correct_answer,
@@ -503,6 +664,9 @@ def create_pyq(pyq_in: PYQCreate, db: Session = Depends(get_db)):
         source=created.source,
         language=created.language or "en",
         is_verified=created.is_verified if created.is_verified is not None else True,
+        question_type=getattr(created, "question_type", "syllabus_practice") or "syllabus_practice",
+        quality_status=getattr(created, "quality_status", "valid") or "valid",
+        rejection_reason=getattr(created, "rejection_reason", None),
         question_text=created.question_text,
         options=created.options,
         correct_answer=created.correct_answer,

@@ -92,6 +92,7 @@ export default function SyllabusPage() {
       loadSyllabus();
     } catch (err) {
       console.error("Failed to update status", err);
+      alert("Could not update topic progress. Please try again.");
     }
   };
 
@@ -112,6 +113,7 @@ export default function SyllabusPage() {
       loadSyllabus();
     } catch (err) {
       console.error("Failed to save notes", err);
+      alert("Could not save your study notes. Please check your connection and sign-in, then try again.");
     } finally {
       setSavingNotes(false);
     }
@@ -119,7 +121,7 @@ export default function SyllabusPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-7">
-      <BackButton fallbackHref="/exams" />
+      <BackButton fallbackHref="/" />
 
       {/* Header */}
       <div className="border-b pb-5 flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -165,7 +167,7 @@ export default function SyllabusPage() {
       ) : (
         <>
           {/* Overall Completion Hero Card */}
-          <div className="editorial-card p-6 md:p-8 space-y-4 bg-gradient-to-br from-[var(--surface-elevated)] to-[var(--surface)]">
+          <div className="editorial-card p-6 md:p-8 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <span className="eyebrow text-xs">CURRICULUM MASTERY</span>
@@ -176,16 +178,16 @@ export default function SyllabusPage() {
                 </p>
               </div>
 
-              <div className="text-3xl font-bold font-mono text-emerald-600 bg-[var(--surface)] px-4 py-2 rounded-xl border">
+              <div className="text-3xl font-bold font-mono text-[var(--status-teal)] bg-[var(--surface)] px-4 py-2 rounded-xl border border-[var(--border-subtle)] shadow-xs">
                 {syllabus.overall_completion_percentage}%
               </div>
             </div>
 
             {/* Progress Bar */}
-            <div className="w-full h-3 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-800">
+            <div className="w-full h-3 rounded-full overflow-hidden bg-[var(--surface-elevated)] border border-[var(--border-subtle)]">
               <div
                 style={{ width: `${syllabus.overall_completion_percentage}%` }}
-                className="h-full bg-emerald-500 transition-all duration-500 rounded-full"
+                className="h-full bg-[var(--status-teal)] transition-all duration-500 rounded-full"
               />
             </div>
           </div>
