@@ -1,0 +1,54 @@
+﻿# Environment files and secrets
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+# Git
+.git
+.gitignore
+.github
+
+# Python
+venv/
+.venv/
+**/__pycache__/
+**/*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node.js
+node_modules/
+**/node_modules/
+.next/
+**/.next/
+.turbo/
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs and temporary files
+*.log
+logs/
+tmp/
+temp/
+
+# Backups and diagnostic files
+backups/
+*.bak
+*.backup
+FLASHFACTS_FULL_DIAGNOSTIC_*.txt
+staged-review.txt
+
+# Editors and operating system
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
